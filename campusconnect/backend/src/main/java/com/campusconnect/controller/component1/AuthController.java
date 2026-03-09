@@ -10,6 +10,7 @@ import com.campusconnect.dto.component1.AuthResponse;
 import com.campusconnect.repository.component1.UserRepository;
 import com.campusconnect.entity.component1.User;
 
+@CrossOrigin(origins = "http://localhost:5174")
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
