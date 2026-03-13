@@ -10,7 +10,7 @@ import com.campusconnect.dto.component1.AuthResponse;
 import com.campusconnect.repository.component1.UserRepository;
 import com.campusconnect.entity.component1.User;
 
-@CrossOrigin(origins = "http://localhost:5174")
+@CrossOrigin(origins = {"http://localhost:5174", "http://localhost:5174"})
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
@@ -43,7 +43,9 @@ public class AuthController {
         User user = userRepository.findByUsername(request.getUsername())
                 .orElseThrow();
 
-        String token = jwtService.generateToken(user.getUsername());
+        String token = jwtService.generateToken(
+                user.getUsername(),
+                user.getRole().getRoleName());
         return new AuthResponse(
                 token,
                 user.getUserId(),

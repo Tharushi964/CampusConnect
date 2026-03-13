@@ -1,5 +1,8 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import Login from "./pages/component1/Login.jsx"; // your login page
+import { ThemeProvider } from "./contexts/ThemeContext.jsx";
+import { AuthProvider } from "./contexts/AuthContext";
+import ProtectedRoute from "./routes/ProtectedRoutes.jsx";
+import Login from "./component1/pages/Login.jsx"; // your login page
 
 function App() {
   // function to check if user is logged in
@@ -8,15 +11,20 @@ function App() {
   };
 
   return (
-    <Router>
+    <ThemeProvider>
+      <AuthProvider>
+      <Router>
       <Routes>
         {/* Login route */}
-        <Route path="/login" element={<Login />} />
+        <Route path="/campusconnect/login" element={<Login />} />
 
         {/* Default route redirects to login */}
-        <Route path="*" element={<Navigate to="/login" />} />
+        <Route path="*" element={<Navigate to="/campusconnect/login" />} />
       </Routes>
     </Router>
+     </AuthProvider>
+    </ThemeProvider>
+    
   );
 }
 
