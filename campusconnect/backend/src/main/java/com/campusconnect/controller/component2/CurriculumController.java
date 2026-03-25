@@ -4,38 +4,43 @@ import com.campusconnect.dto.component2.CurriculumDtos;
 import com.campusconnect.service.component2.CurriculumService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/component2/curriculums")
+@RequestMapping("/api/curriculums")
 @RequiredArgsConstructor
 public class CurriculumController {
     private final CurriculumService curriculumService;
 
-    @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/create")
     public CurriculumDtos.Response create(@Valid @RequestBody CurriculumDtos.Request request) {
         return curriculumService.create(request);
     }
 
-    @PutMapping("/{curriculumId}")
-    public CurriculumDtos.Response update(@PathVariable Long curriculumId, @Valid @RequestBody CurriculumDtos.Request request) {
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/update")
+    public CurriculumDtos.Response update(@RequestParam Long curriculumId, @Valid @RequestBody CurriculumDtos.Request request) {
         return curriculumService.update(curriculumId, request);
     }
 
-    @GetMapping("/{curriculumId}")
-    public CurriculumDtos.Response getById(@PathVariable Long curriculumId) {
+    @GetMapping("/get")
+    public CurriculumDtos.Response getById(@RequestParam Long curriculumId) {
         return curriculumService.getById(curriculumId);
     }
 
-    @GetMapping
+    @GetMapping("/all")
     public List<CurriculumDtos.Response> getAll() {
         return curriculumService.getAll();
     }
 
-    @DeleteMapping("/{curriculumId}")
-    public void delete(@PathVariable Long curriculumId) {
+    @PreAuthorize("hasRole('ADMIN')")
+    @DeleteMapping("/delete")
+    public void delete(@RequestParam Long curriculumId) {
         curriculumService.delete(curriculumId);
     }
 }

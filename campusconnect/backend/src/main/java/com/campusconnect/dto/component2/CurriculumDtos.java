@@ -15,7 +15,7 @@ public final class CurriculumDtos {
             @NotBlank 
             String version,
 
-            @NotNull @Min(1900) 
+            @NotNull @Min(2023) 
             Integer createdYear,
             
             @NotBlank 

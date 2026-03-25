@@ -16,13 +16,15 @@ public class Subject {
 
     private String subjectName;
 
-    private Integer yearNumber;
-
-    private Integer semesterNumber;
-
     private Integer credits;
 
     @ManyToOne
     @JoinColumn(name = "curriculum_id")
     private Curriculum curriculum;
+
+    @ManyToOne
+    @JoinColumn(name = "semester_id")
+    private Semester semester;
+
+    
 }

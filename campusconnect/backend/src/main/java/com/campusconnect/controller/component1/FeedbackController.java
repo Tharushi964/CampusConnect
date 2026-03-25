@@ -9,9 +9,10 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/component1/feedbacks")
+@RequestMapping("/api/feedbacks")
 @RequiredArgsConstructor
 public class FeedbackController {
+
     private final FeedbackService feedbackService;
 
     @PostMapping
@@ -20,7 +21,8 @@ public class FeedbackController {
     }
 
     @PutMapping("/{feedbackId}")
-    public FeedbackDtos.Response update(@PathVariable Long feedbackId, @Valid @RequestBody FeedbackDtos.Request request) {
+    public FeedbackDtos.Response update(@PathVariable Long feedbackId,
+                                        @RequestBody FeedbackDtos.Request request) {
         return feedbackService.update(feedbackId, request);
     }
 
@@ -34,9 +36,20 @@ public class FeedbackController {
         return feedbackService.getAll();
     }
 
+    // ✅ NEW
+    @GetMapping("/session/{sessionId}")
+    public List<FeedbackDtos.Response> getBySession(@PathVariable Long sessionId) {
+        return feedbackService.getBySessionId(sessionId);
+    }
+
+    // ✅ NEW
+    @GetMapping("/user/{userId}")
+    public List<FeedbackDtos.Response> getByUser(@PathVariable Long userId) {
+        return feedbackService.getByUserId(userId);
+    }
+
     @DeleteMapping("/{feedbackId}")
     public void delete(@PathVariable Long feedbackId) {
         feedbackService.delete(feedbackId);
     }
 }
-

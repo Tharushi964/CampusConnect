@@ -5,14 +5,12 @@ import com.campusconnect.dto.component3.SessionAttendanceDtos;
 import java.util.List;
 
 public interface SessionAttendanceService {
-    SessionAttendanceDtos.Response create(SessionAttendanceDtos.Request request);
 
-    SessionAttendanceDtos.Response update(Long sessionId, Long userId, SessionAttendanceDtos.Request request);
+    SessionAttendanceDtos.Response mark(SessionAttendanceDtos.Request request);
 
-    SessionAttendanceDtos.Response getById(Long sessionId, Long userId);
+    void remove(Long sessionId, Long userId);
 
-    List<SessionAttendanceDtos.Response> getAll();
+    List<SessionAttendanceDtos.Response> getBySession(Long sessionId);
 
-    void delete(Long sessionId, Long userId);
+    List<SessionAttendanceDtos.Response> getByUser(Long userId);
 }
-

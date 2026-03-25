@@ -10,10 +10,13 @@ public final class FeedbackDtos {
     }
 
     public record Request(
+        //positive negative
             @NotBlank String feedbackType,
             @NotBlank String message,
             @NotBlank String status,
-            @NotNull Long userId
+            @NotNull Long userId,
+            @NotNull Long sessionId
+
     ) {
     }
 
@@ -23,7 +26,8 @@ public final class FeedbackDtos {
             String message,
             String status,
             LocalDateTime createdAt,
-            Long userId
+            Long userId,
+            Long sessionId
     ) {
     }
 }

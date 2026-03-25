@@ -11,6 +11,8 @@ public interface SessionService {
 
     SessionDtos.Response getById(Long sessionId);
 
+    List<SessionDtos.Response> getByGroup(Long groupId);
+
     List<SessionDtos.Response> getAll();
 
     void delete(Long sessionId);

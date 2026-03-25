@@ -20,15 +20,13 @@ public final class UserDtos {
 
             @NotBlank 
             @Email String email,
-            @NotBlank
+
             String username,
 
-            @NotBlank 
             String password,
 
             String status,
 
-            @NotNull 
             Long roleId,
 
             Long batchId,

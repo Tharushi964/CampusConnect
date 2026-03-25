@@ -12,6 +12,8 @@ public final class SessionAttendanceDtos {
             @NotNull Long userId,
             @NotBlank String attendanceStatus
     ) {
+
+
     }
 
     public record Response(

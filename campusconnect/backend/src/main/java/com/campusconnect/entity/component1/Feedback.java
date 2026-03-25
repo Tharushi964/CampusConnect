@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDateTime;
 
+import com.campusconnect.entity.component3.Session;
+
 @Data
 @Entity
 @Table(name = "feedback")
@@ -25,4 +27,8 @@ public class Feedback {
     @ManyToOne
     @JoinColumn(name = "user_id")
     private User user;
+
+    @ManyToOne
+    @JoinColumn(name = "session_id")
+    private Session session;
 }

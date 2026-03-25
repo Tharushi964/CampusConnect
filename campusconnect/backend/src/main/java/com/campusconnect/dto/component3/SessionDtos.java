@@ -12,9 +12,12 @@ public final class SessionDtos {
 
     public record Request(
             @NotNull LocalDate sessionDate,
+            @NotBlank String sessionName,
             @NotNull LocalTime startTime,
             @NotNull LocalTime endTime,
-            @NotBlank String locationOrLink,
+            @NotBlank String mode,
+             String location,
+             String link,
             @NotBlank String status,
             @NotNull Long groupId,
             @NotNull Long createdByUserId
@@ -24,9 +27,12 @@ public final class SessionDtos {
     public record Response(
             Long sessionId,
             LocalDate sessionDate,
+            String sessionName,
             LocalTime startTime,
             LocalTime endTime,
-            String locationOrLink,
+            String mode,
+            String location,
+            String link,
             String status,
             Long groupId,
             Long createdByUserId

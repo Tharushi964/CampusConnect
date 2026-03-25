@@ -7,6 +7,7 @@ import java.time.LocalDateTime;
 import com.campusconnect.entity.component1.User;
 import com.campusconnect.entity.component2.Semester;
 import com.campusconnect.entity.component2.Subject;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 @Entity
 @Table(name = "study_group")
@@ -27,13 +28,16 @@ public class StudyGroup {
 
     @ManyToOne
     @JoinColumn(name = "subject_id")
+    @JsonIgnore
     private Subject subject;
 
     @ManyToOne
     @JoinColumn(name = "semester_id")
+    @JsonIgnore
     private Semester semester;
 
     @ManyToOne
     @JoinColumn(name = "created_by")
+    @JsonIgnore
     private User createdBy;
 }

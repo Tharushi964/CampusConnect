@@ -4,38 +4,43 @@ import com.campusconnect.dto.component2.SemesterDtos;
 import com.campusconnect.service.component2.SemesterService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/component2/semesters")
+@RequestMapping("/api/semesters")
 @RequiredArgsConstructor
 public class SemesterController {
     private final SemesterService semesterService;
 
-    @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/create")
     public SemesterDtos.Response create(@Valid @RequestBody SemesterDtos.Request request) {
         return semesterService.create(request);
     }
 
-    @PutMapping("/{semesterId}")
-    public SemesterDtos.Response update(@PathVariable Long semesterId, @Valid @RequestBody SemesterDtos.Request request) {
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/update")
+    public SemesterDtos.Response update(@RequestParam Long semesterId, @Valid @RequestBody SemesterDtos.Request request) {
         return semesterService.update(semesterId, request);
     }
 
-    @GetMapping("/{semesterId}")
-    public SemesterDtos.Response getById(@PathVariable Long semesterId) {
+    @GetMapping("/get")
+    public SemesterDtos.Response getById(@RequestParam Long semesterId) {
         return semesterService.getById(semesterId);
     }
 
-    @GetMapping
+    @GetMapping("/all")
     public List<SemesterDtos.Response> getAll() {
         return semesterService.getAll();
     }
 
-    @DeleteMapping("/{semesterId}")
-    public void delete(@PathVariable Long semesterId) {
+    @PreAuthorize("hasRole('ADMIN')")
+    @DeleteMapping("/delete")
+    public void delete(@RequestParam Long semesterId) {
         semesterService.delete(semesterId);
     }
 }

@@ -10,7 +10,7 @@ const ProtectedRoute = ({ allowedRoles, children }) => {
   if (!token) {
     return (
       <Navigate
-        to="/login"
+        to="/campusconnect/login"
         replace
         state={{ from: location }}
       />

@@ -118,27 +118,59 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserDtos.Response update(Long userId, UserDtos.Request request) {
+
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found: " + userId));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
-        Role role = roleRepository.findById(request.roleId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Role not found: " + request.roleId()));
+        // ✅ Update only if provided
+        if (request.firstName() != null) {
+            user.setFirstName(request.firstName());
+        }
 
-        Batch batch = null;
-            if (request.batchId() != null) {
-                batch = batchRepository.findById(request.batchId())
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Batch not found"));
+        if (request.lastName() != null) {
+            user.setLastName(request.lastName());
+        }
+
+        if (request.email() != null) {
+            if (userRepository.existsByEmail(request.email()) &&
+                !user.getEmail().equals(request.email())) {
+
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email already exists");
             }
+            user.setEmail(request.email());
+        }
 
+        if (request.studentId() != null) {
+           if (userRepository.existsByStudentId(request.studentId()) &&
+                !user.getStudentId().equals(request.studentId())) {
 
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "StudentId already exists");
+            }
+            user.setStudentId(request.studentId());
+        }
 
-        user.setFirstName(request.firstName());
-        user.setLastName(request.lastName());
-        user.setEmail(request.email());
-        user.setPassword(passwordEncoder.encode(request.password()));
-        user.setStatus(request.status());
-        user.setRole(role);
-        user.setBatch(batch);
+        if (request.password() != null) {
+            user.setPassword(passwordEncoder.encode(request.password()));
+        }
+
+        if (request.status() != null) {
+            user.setStatus(request.status());
+        }
+
+        // ✅ Handle role safely
+        if (request.roleId() != null) {
+            Role role = roleRepository.findById(request.roleId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Role not found"));
+            user.setRole(role);
+        }
+
+        // ✅ Handle batch safely
+        if (request.batchId() != null) {
+            Batch batch = batchRepository.findById(request.batchId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Batch not found"));
+            user.setBatch(batch);
+        }
+
         return toResponse(userRepository.save(user));
     }
 

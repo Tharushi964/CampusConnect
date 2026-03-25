@@ -13,6 +13,8 @@ public interface SubjectService {
 
     List<SubjectDtos.Response> getAll();
 
+    List<SubjectDtos.Response> getBySemester(Long semesterId);
+
     void delete(Long subjectId);
 }
 

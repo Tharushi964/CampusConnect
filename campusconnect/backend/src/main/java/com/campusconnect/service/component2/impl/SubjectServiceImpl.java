@@ -2,8 +2,10 @@ package com.campusconnect.service.component2.impl;
 
 import com.campusconnect.dto.component2.SubjectDtos;
 import com.campusconnect.entity.component2.Curriculum;
+import com.campusconnect.entity.component2.Semester;
 import com.campusconnect.entity.component2.Subject;
 import com.campusconnect.repository.component2.CurriculumRepository;
+import com.campusconnect.repository.component2.SemesterRepository;
 import com.campusconnect.repository.component2.SubjectRepository;
 import com.campusconnect.service.component2.SubjectService;
 import lombok.RequiredArgsConstructor;
@@ -18,19 +20,21 @@ import java.util.List;
 public class SubjectServiceImpl implements SubjectService {
     private final SubjectRepository subjectRepository;
     private final CurriculumRepository curriculumRepository;
+    private final SemesterRepository semesterRepository;
 
     @Override
     public SubjectDtos.Response create(SubjectDtos.Request request) {
         Curriculum curriculum = curriculumRepository.findById(request.curriculumId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Curriculum not found: " + request.curriculumId()));
+        Semester semester = semesterRepository.findById(request.semesterId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Semester not found: " + request.semesterId()));        
 
         Subject subject = new Subject();
         subject.setSubjectCode(request.subjectCode());
         subject.setSubjectName(request.subjectName());
-        subject.setYearNumber(request.yearNumber());
-        subject.setSemesterNumber(request.semesterNumber());
         subject.setCredits(request.credits());
         subject.setCurriculum(curriculum);
+        subject.setSemester(semester);
         return toResponse(subjectRepository.save(subject));
     }
 
@@ -41,13 +45,15 @@ public class SubjectServiceImpl implements SubjectService {
 
         Curriculum curriculum = curriculumRepository.findById(request.curriculumId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Curriculum not found: " + request.curriculumId()));
+        
+        Semester semester = semesterRepository.findById(request.semesterId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Semester not found: " + request.semesterId()));
 
         subject.setSubjectCode(request.subjectCode());
         subject.setSubjectName(request.subjectName());
-        subject.setYearNumber(request.yearNumber());
-        subject.setSemesterNumber(request.semesterNumber());
         subject.setCredits(request.credits());
         subject.setCurriculum(curriculum);
+        subject.setSemester(semester);
         return toResponse(subjectRepository.save(subject));
     }
 
@@ -59,9 +65,18 @@ public class SubjectServiceImpl implements SubjectService {
     }
 
     @Override
+    public List<SubjectDtos.Response> getBySemester(Long semesterId) {
+        return subjectRepository.findBySemester_SemesterId(semesterId)
+                .stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    @Override
     public List<SubjectDtos.Response> getAll() {
         return subjectRepository.findAll().stream().map(this::toResponse).toList();
     }
+
 
     @Override
     public void delete(Long subjectId) {
@@ -76,10 +91,9 @@ public class SubjectServiceImpl implements SubjectService {
                 subject.getSubjectId(),
                 subject.getSubjectCode(),
                 subject.getSubjectName(),
-                subject.getYearNumber(),
-                subject.getSemesterNumber(),
                 subject.getCredits(),
-                subject.getCurriculum() == null ? null : subject.getCurriculum().getCurriculumId()
+                subject.getCurriculum() == null ? null : subject.getCurriculum().getCurriculumId(),
+                subject.getSemester() == null ? null : subject.getSemester().getSemesterId()
         );
     }
 }
