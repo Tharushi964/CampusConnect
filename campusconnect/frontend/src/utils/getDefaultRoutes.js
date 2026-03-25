@@ -4,7 +4,7 @@ export const getDefaultRoute = (roles) => {
  
   switch (normalizedRole) {
     case "admin":
-      return "/admin/dashboard";
+      return "/campusconnect/admin-dashboard";
 
     case "batchrep":
       return  `/batchrep/dashboard`;

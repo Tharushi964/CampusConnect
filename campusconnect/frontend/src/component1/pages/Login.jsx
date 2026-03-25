@@ -14,6 +14,7 @@ export default function Login() {
 
   const navigate = useNavigate();
   const { login } = useAuth();
+  
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -34,6 +35,7 @@ export default function Login() {
     try {
       const user = await login(username, password);
       console.log("Login successful:", user);
+      navigate("/campusconnect/admin", { replace: true });
       setLoading(false);
       setNotification({ show: true, type: "success", message: "Login Successful" });
       console.log(notification)
@@ -117,13 +119,24 @@ export default function Login() {
                 ${theme.inputBg} ${theme.border} ${theme.text}`}
             />
           </div>
-
           <button
             type="submit"
             className={`w-full bg-gradient-to-r ${theme.gradientPrimary} text-white py-3 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity`}
           >
             Login
           </button>
+
+          {/* Add this below the button */}
+          <p className={`text-xs text-center mt-4 ${theme.textSecondary}`}>
+            Don't have an account?{" "}
+            <button
+              type="button"
+              onClick={() => navigate("/campusconnect/signup")}
+              className={`font-semibold underline ${theme.link}`}
+            >
+              Sign up
+            </button>
+          </p>
         </form>
       </div>
     </div>
