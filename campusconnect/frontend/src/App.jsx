@@ -4,6 +4,7 @@ import { AuthProvider } from "./contexts/AuthContext";
 import Login from "./component1/pages/Login.jsx"; // your login page
 import SignUp from "./component1/pages/SignUp.jsx";
 import Admin from "./component1/pages/Admin.jsx";
+import DashboardPage from "./component1/pages/DashboardPage.jsx";
 
 function App() {
   // function to check if user is logged in
@@ -25,6 +26,9 @@ function App() {
 
         {/* Admin rote*/}
         <Route path="/campusconnect/admin-dashboard" element={<Admin />} />
+
+         {/* Student rote*/}
+        <Route path="/campusconnect/student-dashboard" element={<DashboardPage />} />
       </Routes>
     </Router>
      </AuthProvider>

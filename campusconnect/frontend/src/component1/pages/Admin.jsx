@@ -953,7 +953,7 @@ export default function Admin() {
       </main>
 
       <ConfirmModal isDark={isDark} open={logoutConfirm} onClose={()=>setLogoutConfirm(false)} onConfirm={handleLogout} title="Logout?" message="Are you sure you want to log out of the admin portal?" confirmLabel="Yes, Logout" variant="danger"/>
-      <ToastPopup show={logoutSuccessToast} message="Logged out successfully. Redirecting…" type="success" onClose={()=>setLogoutSuccessToast(false)}/>
+      <ToastPopup show={logoutSuccessToast} message="Logged out successfully!" type="success" onClose={()=>setLogoutSuccessToast(false)}/>
     </div>
   );
 }
