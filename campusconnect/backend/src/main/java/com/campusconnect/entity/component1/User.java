@@ -6,6 +6,9 @@ import java.time.LocalDateTime;
 
 import com.campusconnect.entity.component2.Batch;
 import com.campusconnect.entity.component2.Campus;
+import com.campusconnect.entity.component2.Faculty;
+import com.campusconnect.entity.component2.Program;
+import com.campusconnect.entity.component2.Semester;
 
 @Data
 @Entity
@@ -42,6 +45,18 @@ public class User {
     @ManyToOne
     @JoinColumn(name = "batch_id")
     private Batch batch;
+
+    @ManyToOne
+    @JoinColumn(name = "faculty_id")
+    private Faculty faculty;
+
+    @ManyToOne
+    @JoinColumn(name = "program_id")
+    private Program program;
+
+    @ManyToOne
+    @JoinColumn(name = "semester_id")
+    private Semester semester;
 
     @ManyToOne
     @JoinColumn(name = "campus_id")

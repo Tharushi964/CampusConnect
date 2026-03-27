@@ -19,14 +19,16 @@ public class Rating {
     private Long ratingId;
 
     private String entityType;
+    // SUBJECT / SESSION / GROUP / RESOURCE
 
-    private Long entityId;
+    private Long entityId;// id of subject/session/group/resource
 
     private Integer ratingValue;
 
     private String comment;
 
     private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 
     @ManyToOne
     @JoinColumn(name = "user_id")

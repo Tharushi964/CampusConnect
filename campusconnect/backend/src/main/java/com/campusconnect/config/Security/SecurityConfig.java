@@ -25,6 +25,30 @@ public SecurityFilterChain filterChain(HttpSecurity http, JWTAuthenticationFilte
                 .requestMatchers("/api/auth/login").permitAll()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/users/create").permitAll()
+
+                .requestMatchers("/api/roles/all").permitAll()
+                .requestMatchers("/api/roles/**").hasRole("ADMIN")
+
+                .requestMatchers("/api/batches/all").permitAll()
+                .requestMatchers("/api/batches/get").permitAll()
+                .requestMatchers("/api/batches/**").hasAnyRole("ADMIN","BATCH_REP")
+                .requestMatchers("/api/batches/delete").hasRole("ADMIN")
+
+                .requestMatchers("/api/campus/all").permitAll()
+                .requestMatchers("/api/campus/getById").permitAll()
+
+                .requestMatchers("/api/curriculam/all").permitAll()
+                .requestMatchers("/api/curriculam/get").permitAll()
+
+                .requestMatchers("/api/faculties/all").permitAll()
+                .requestMatchers("/api/faculties/get").permitAll()
+
+                .requestMatchers("/api/semesters/all").permitAll()
+                .requestMatchers("/api/semesters/get").permitAll()
+                
+                .requestMatchers("/api/subjects/get").permitAll()
+                .requestMatchers("/api/subjects/getBySemester").permitAll()
+
                 .anyRequest().authenticated()
         )
         .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);

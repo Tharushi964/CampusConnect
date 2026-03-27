@@ -30,7 +30,10 @@ public final class UserDtos {
             Long roleId,
 
             Long batchId,
-            Long campusId
+            Long campusId,
+            Long programId,
+            Long facultyId,
+            Long semesterId
             
             
     ) {
@@ -47,7 +50,10 @@ public final class UserDtos {
             LocalDateTime createdAt,
             Long roleId,
             Long batchId,
-            Long campusId
+            Long campusId,
+            Long programId,
+            Long facultyId,
+            Long semesterId
     ) {
     }
 }

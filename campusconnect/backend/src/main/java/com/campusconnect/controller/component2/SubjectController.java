@@ -1,6 +1,7 @@
 package com.campusconnect.controller.component2;
 
 import com.campusconnect.dto.component2.SubjectDtos;
+import com.campusconnect.dto.component2.SubjectDtos.Response;
 import com.campusconnect.service.component2.SubjectService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +32,11 @@ public class SubjectController {
     @GetMapping("/get")
     public SubjectDtos.Response getById(@RequestParam Long subjectId) {
         return subjectService.getById(subjectId);
+    }
+
+    @GetMapping("/getBySemester")
+    public List<Response> getBySemester(@RequestParam Long semesterId) {
+        return subjectService.getBySemester(semesterId);
     }
 
     @GetMapping("/all")

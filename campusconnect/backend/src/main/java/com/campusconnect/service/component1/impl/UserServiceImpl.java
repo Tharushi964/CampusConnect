@@ -6,11 +6,17 @@ import com.campusconnect.entity.component1.Role;
 import com.campusconnect.entity.component1.User;
 import com.campusconnect.entity.component2.Batch;
 import com.campusconnect.entity.component2.Campus;
+import com.campusconnect.entity.component2.Faculty;
+import com.campusconnect.entity.component2.Program;
+import com.campusconnect.entity.component2.Semester;
 import com.campusconnect.repository.component1.BatchRepRequestRepository;
 import com.campusconnect.repository.component1.RoleRepository;
 import com.campusconnect.repository.component1.UserRepository;
 import com.campusconnect.repository.component2.BatchRepository;
 import com.campusconnect.repository.component2.CampusRepository;
+import com.campusconnect.repository.component2.FacultyRepository;
+import com.campusconnect.repository.component2.ProgramRepository;
+import com.campusconnect.repository.component2.SemesterRepository;
 import com.campusconnect.service.component1.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -29,6 +35,9 @@ public class UserServiceImpl implements UserService {
     private final BatchRepository batchRepository;
     private final CampusRepository campusRepository;
     private final BatchRepRequestRepository batchRepRequestRepository;
+    private final ProgramRepository programRepository;
+    private final FacultyRepository facultyRepository;
+    private final SemesterRepository semesterRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Override
@@ -36,6 +45,26 @@ public class UserServiceImpl implements UserService {
 
             Role role = roleRepository.findById(request.roleId())
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Role not found"));
+            String roleName = role.getRoleName().toUpperCase();
+            
+                    if (!roleName.equals("ADMIN")) {
+
+                        if (request.batchId() == null) {
+                            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Batch is required");
+                        }
+
+                        if (request.programId() == null) {
+                            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Program is required");
+                        }
+
+                        if (request.facultyId() == null) {
+                            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Faculty is required");
+                        }
+
+                        if (request.semesterId() == null) {
+                            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Semester is required");
+                        }
+                    }
 
             boolean isBatchRep = role.getRoleName().equalsIgnoreCase("BATCHREP");
 
@@ -79,6 +108,14 @@ public class UserServiceImpl implements UserService {
             if (userRepository.existsByEmail(request.email())) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email already exists");
             }
+            Program program = programRepository.findById(request.programId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Program not found"));
+
+            Faculty faculty = facultyRepository.findById(request.facultyId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Faculty not found"));
+
+            Semester semester = semesterRepository.findById(request.semesterId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Semester not found"));
 
             User user = new User();
             user.setFirstName(request.firstName());
@@ -91,6 +128,9 @@ public class UserServiceImpl implements UserService {
             user.setRole(role);
             user.setBatch(batch);
             user.setCampus(campus);
+            user.setFaculty(faculty);
+            user.setProgram(program);
+            user.setSemester(semester);
 
             if (isBatchRep) {
                 user.setStatus("PENDING_APPROVAL");
@@ -207,7 +247,10 @@ public class UserServiceImpl implements UserService {
             user.getCreatedAt(),
             roleId,
             user.getBatch() == null ? null : user.getBatch().getBatchId(),
-            user.getCampus() == null ? null : user.getCampus().getCampusId()
+            user.getCampus() == null ? null : user.getCampus().getCampusId(),
+            user.getFaculty() == null ? null : user.getFaculty().getFacultyId(),
+            user.getProgram() == null ? null : user.getProgram().getProgramId(),
+            user.getSemester() == null ? null : user.getSemester().getSemesterId()
         );
 
     }

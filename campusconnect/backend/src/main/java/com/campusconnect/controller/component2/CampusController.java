@@ -30,7 +30,7 @@
             return campusService.update(campusId, request);
         }
 
-        @GetMapping
+        @GetMapping("/getById")
         public CampusDtos.Response getById(@RequestParam Long campusId) {
             return campusService.getById(campusId);
         }

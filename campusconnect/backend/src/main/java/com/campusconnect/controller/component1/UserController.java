@@ -4,6 +4,8 @@ import com.campusconnect.dto.component1.UserDtos;
 import com.campusconnect.service.component1.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;

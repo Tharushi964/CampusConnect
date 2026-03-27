@@ -20,6 +20,10 @@ export const getAllRoles = () => {
     return api.get(`/api/roles/all`);
 }
 
+export const getAllCampus = () => {
+    return api.get(`/api/campus/all`);
+}
+
 export const createFaculty = (data) => {
     api.post("/api/faculties/create", data);
 }
@@ -35,6 +39,8 @@ export const getAllFaculties = () => {
 export const deleteFaculty = (id) => {
     api.delete(`/api/faculties/delete?id=${id}`);
 }
+
+
 export const createProgram = (data) => {
     api.post("/api/programs/create", data);
 }
@@ -50,6 +56,8 @@ export const getAllPrograms = () => {
 export const deleteProgram = (programId) => {
     api.delete(`/api/programs/delete?programId=${programId}`);
 }
+
+
 export const createBatch = (data) => {
     api.post("/api/batches/create", data);
 }
@@ -65,6 +73,8 @@ export const getAllBatches = () => {
 export const deleteBatch = (batchId) => {
     api.delete(`/api/batches/delete?batchId=${batchId}`);
 }
+
+
 export const getPendingBatchRepRequests = () => {
     return api.get("/api/admin/batchrep/requests");
 }
