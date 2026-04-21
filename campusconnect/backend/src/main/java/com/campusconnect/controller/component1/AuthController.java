@@ -16,6 +16,7 @@ import com.campusconnect.entity.component1.User;
 public class AuthController {
     private final AuthenticationManager authenticationManager;
     private final UserRepository userRepository;
+    private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder = new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder();
 
      private final JWTService jwtService;
 
@@ -28,10 +29,19 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public AuthResponse login(@RequestBody AuthRequest request) {
+        public AuthResponse login(@RequestBody AuthRequest request) {
+
         System.out.println("LOGIN API CALLED");
         System.out.println("USERNAME: " + request.getUsername());
         System.out.println("PASSWORD: " + request.getPassword());
+
+        User user = userRepository.findByUsername(request.getUsername())
+                .orElseThrow();
+
+        System.out.println("DB PASSWORD = " + user.getPassword());
+
+        System.out.println("MATCH RESULT = " +
+                passwordEncoder.matches(request.getPassword(), user.getPassword()));
 
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
@@ -40,12 +50,10 @@ public class AuthController {
                 )
         );
 
-        User user = userRepository.findByUsername(request.getUsername())
-                .orElseThrow();
-
         String token = jwtService.generateToken(
                 user.getUsername(),
                 user.getRole().getRoleName());
+
         return new AuthResponse(
                 token,
                 user.getUserId(),
@@ -59,6 +67,6 @@ public class AuthController {
                 user.getBatch() == null ? null : user.getBatch().getBatchId(),
                 user.getSemester() == null ? null : user.getSemester().getSemesterId()
         );
-        
-    }
+        }
+
 }

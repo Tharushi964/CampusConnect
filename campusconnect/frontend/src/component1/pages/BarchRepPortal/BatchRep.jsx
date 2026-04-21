@@ -9,7 +9,7 @@ import { useState } from "react";
 import BatchRepLayout  from "../../components/BatchRepLayout";
 import DashboardPage  from "./DashboardPage";
 import ResourcesPage  from "../../../component2/pages/ResourcesPage";
-import SectionEntities from "../../../component2/pages/SectionEntites";
+import SectionEntities from "../../../component2/pages/BatchRepSectionEntities";
 import RequestsPage   from "./RequestsPage";
 import ProfilePage    from "./ProfilePage";
 import Recommendations from "../../../Component4/pages/Recommendations";

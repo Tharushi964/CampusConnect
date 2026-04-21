@@ -55,34 +55,34 @@ export const deleteResource = (id) => {
     return api.delete(`/api/resources/delete?resourceId=${id}`);
 }
 
-// ✅ Create or Update Rating
+// Create or Update Rating
 export const createOrUpdateRating = (data) => {
     return api.post("/api/ratings", data);
 };
 
-// ✅ Get Rating by ID
+// Get Rating by ID
 export const getRatingById = (id) => {
     return api.get(`/api/ratings/${id}`);
 };
 
-// ✅ Get Ratings by Entity (SUBJECT, RESOURCE, SESSION, GROUP)
+// Get Ratings by Entity (SUBJECT, RESOURCE, SESSION, GROUP)
 export const getRatingsByEntity = (entityType, entityId) => {
     return api.get("/api/ratings/entity", {
         params: { entityType, entityId }
     });
 };
 
-// ✅ Get Ratings by User
+// Get Ratings by User
 export const getRatingsByUser = (userId) => {
     return api.get(`/api/ratings/user/${userId}`);
 };
 
-// ✅ Get All Ratings
+// Get All Ratings
 export const getAllRatings = () => {
     return api.get("/api/ratings");
 };
 
-// ✅ Delete Rating
+// Delete Rating
 export const deleteRating = (id) => {
     return api.delete(`/api/ratings/${id}`);
 };
