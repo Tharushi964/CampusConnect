@@ -49,4 +49,3 @@ public class UserController {
         return userService.verifyUser(token);
     }
 }
-
