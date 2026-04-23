@@ -87,4 +87,27 @@ export const deleteRating = (id) => {
     return api.delete(`/api/ratings/${id}`);
 };
 
+// ─── FEEDBACK API — add this block to c1.api.js ────────────────────────────
+// Import this alongside userAPI, bookingAPI, ticketAPI
+
+export const feedbackAPI = {
+  getAll: () =>
+    api.get("/api/feedbacks"),
+
+  getByFaculty: (facultyName) =>
+    api.get(`/api/feedbacks/faculty/${encodeURIComponent(facultyName)}`),
+
+  getByProgram: (programName) =>
+    api.get(`/api/feedbacks/program/${encodeURIComponent(programName)}`),
+
+  getByProgramAndYear: (programName, year) =>
+    api.get(`/api/feedbacks/program/${encodeURIComponent(programName)}/year/${year}`),
+
+  getByProgramYearSemester: (programName, year, semester) =>
+    api.get(`/api/feedbacks/program/${encodeURIComponent(programName)}/year/${year}/semester/${semester}`),
+
+  getById: (feedbackId) =>
+    api.get(`/api/feedbacks/${feedbackId}`),
+};
+
 
