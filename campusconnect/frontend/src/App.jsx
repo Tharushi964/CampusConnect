@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "./contexts/ThemeContext.jsx";
 import { AuthProvider } from "./contexts/AuthContext";
+import HomePage from "./component1/pages/Homepage.jsx";
 import Login from "./component1/pages/Login.jsx"; // your login page
 import SignUp from "./component1/pages/SignUp.jsx";
 import Verify from "./component1/pages/Verify.jsx";
@@ -20,13 +21,17 @@ function App() {
       <AuthProvider>
       <Router >
       <Routes>
+
+        {/* Home Page route */}
+        <Route path="/" element={<HomePage />} />
+
         {/* Login route */}
         <Route path="/campusconnect/login" element={<Login />} />
         <Route path="/campusconnect/signup" element={<SignUp />} />
         <Route path="/campusconnect/verify" element={<Verify />} />
 
         {/* Default route redirects to login */}
-        <Route path="*" element={<Navigate to="/campusconnect/login" />} />
+        <Route path="/" element={<HomePage />} />
 
         {/* Admin rote*/}
         <Route path="/campusconnect/admin-dashboard" element={<Admin />} />
@@ -36,6 +41,7 @@ function App() {
         <Route path="/campusconnect/batchrep-dashboard" element={<BatchRepPortal />} />
 
         <Route path="/feedbacks" element={<SectionFeedbacks/>}/>
+
         
       </Routes>
     </Router>
