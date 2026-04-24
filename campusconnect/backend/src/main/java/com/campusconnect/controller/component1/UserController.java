@@ -45,6 +45,7 @@ public class UserController {
     }
 
     @GetMapping("/verify")
+    @PreAuthorize("hasAnyRole('ADMIN')")
     public String verifyUser(@RequestParam String token) {
         return userService.verifyUser(token);
     }

@@ -11,6 +11,8 @@ public interface StudyGroupService {
 
     StudyGroupDtos.Response getById(Long groupId);
 
+    List<StudyGroupDtos.Response> getBySemesterId(Long semesterId);
+
     List<StudyGroupDtos.Response> getAll();
 
     void delete(Long groupId);

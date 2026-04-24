@@ -91,6 +91,20 @@ public class StudyGroupServiceImpl implements StudyGroupService {
     }
 
     @Override
+        public List<StudyGroupDtos.Response> getBySemesterId(Long semesterId) {
+
+        
+        if (!semesterRepository.existsById(semesterId)) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Semester not found: " + semesterId);
+        }
+
+        return studyGroupRepository.findBySemester_SemesterId(semesterId)
+                .stream()
+                .map(this::toResponse)
+                .toList();
+        }
+
+    @Override
     public void delete(Long groupId) {
         if (!studyGroupRepository.existsById(groupId)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "StudyGroup not found: " + groupId);

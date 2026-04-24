@@ -17,14 +17,14 @@ public class StudyGroupController {
 
     private final StudyGroupService studyGroupService;
 
-    // ✅ Create group
+    // Create group
     @PreAuthorize("hasAnyRole('ADMIN','BATCHREP')")
     @PostMapping("/create")
     public StudyGroupDtos.Response create(@Valid @RequestBody StudyGroupDtos.Request request) {
         return studyGroupService.create(request);
     }
 
-    // ✅ Update group
+    // Update group
     @PreAuthorize("hasAnyRole('ADMIN','BATCHREP')")
     @PutMapping("/update")
     public StudyGroupDtos.Response update(@RequestParam Long id,
@@ -32,19 +32,24 @@ public class StudyGroupController {
         return studyGroupService.update(id, request);
     }
 
-    // ✅ Get all groups
+    // Get all groups
     @GetMapping("/all")
     public List<StudyGroupDtos.Response> getAll() {
         return studyGroupService.getAll();
     }
 
-    // ✅ Get group by ID
+    // Get group by ID
     @GetMapping("/getById")
     public StudyGroupDtos.Response getById(@RequestParam Long id) {
         return studyGroupService.getById(id);
     }
 
-    // ✅ Delete group
+    @GetMapping("/getBysemester")
+    public List<StudyGroupDtos.Response> getBySemester(@RequestParam Long semesterId) {
+        return studyGroupService.getBySemesterId(semesterId);
+    }
+
+    // Delete group
     @PreAuthorize("hasAnyRole('ADMIN','BATCHREP')")
     @DeleteMapping("/delete")
     public void delete(@RequestParam Long id) {

@@ -24,11 +24,9 @@ public SecurityFilterChain filterChain(HttpSecurity http, JWTAuthenticationFilte
         .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/login").permitAll()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                .requestMatchers("/api/users/create").permitAll()
-                .requestMatchers("/api/users/get").permitAll()
-                .requestMatchers("/api/users/update").permitAll()
-                .requestMatchers("/api/users/verify").permitAll()
 
+                .requestMatchers("/api/users/**").permitAll()
+                
                 .requestMatchers("/api/roles/all").permitAll()
                 .requestMatchers("/api/roles/**").hasRole("ADMIN")
 
@@ -65,6 +63,8 @@ public SecurityFilterChain filterChain(HttpSecurity http, JWTAuthenticationFilte
                 .requestMatchers("/api/resources/update").permitAll()
 
                 .requestMatchers("/api/group-members/**").permitAll()
+
+                .requestMatchers("/api/groups/**").permitAll()
 
 
                 .anyRequest().authenticated()
