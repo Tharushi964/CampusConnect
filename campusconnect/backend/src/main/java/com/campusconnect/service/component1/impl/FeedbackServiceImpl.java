@@ -15,8 +15,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
-import static org.junit.jupiter.api.DynamicTest.stream;
-
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -33,7 +31,6 @@ public class FeedbackServiceImpl implements FeedbackService {
         return Long.parseLong(SecurityContextHolder.getContext().getAuthentication().getName());
     }
 
-    
 
     // ===========================
     // CREATE
@@ -147,12 +144,12 @@ public class FeedbackServiceImpl implements FeedbackService {
     }
 
     // ===========================
-    // 🔥 ADMIN FILTERS
+    //  ADMIN FILTERS
     // ===========================
 
     @Override
     public List<FeedbackDtos.Response> getByFaculty(String faculty) {
-        return feedbackRepository. findBySession_Program_Faculty_Name(faculty)
+        return feedbackRepository.findBySession_Program_Faculty_FacultyName(faculty)
                 .stream()
                 .map(this::toResponse)
                 .toList();
@@ -174,15 +171,15 @@ public class FeedbackServiceImpl implements FeedbackService {
                 .toList();
     }
 
- @Override
-public List<FeedbackDtos.Response> getByProgramYearAndSemester(String program, int year, int semester) {
+    @Override
+    public List<FeedbackDtos.Response> getByProgramYearAndSemester(String program, int year, int semester) {
 
-    return feedbackRepository
-            .findBySession_Program_NameAndSession_YearAndSession_Semester(program, year, semester)
-            .stream()
-            .map(this::toResponse)
-            .toList();
-}
+        return feedbackRepository
+                .findBySession_Program_NameAndSession_YearAndSession_Semester(program, year, semester)
+                .stream()
+                .map(this::toResponse)
+                .toList();
+    }
 
     // ===========================
     // MAPPER

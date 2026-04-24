@@ -8,6 +8,7 @@ import Admin from "./component1/pages/Admin.jsx";
 import StudentPortal from "./component1/pages/StudentPortal/Student.jsx";
 import BatchRepPortal from "./component1/pages/BarchRepPortal/BatchRep.jsx";
 import StudyGroups from "./component3/pages/StudyGroups.jsx";
+import SectionFeedbacks from "./component1/pages/Sectionfeedbacks.jsx";
 function App() {
   // function to check if user is logged in
   const isAuthenticated = () => {
@@ -33,6 +34,8 @@ function App() {
          {/* Student rote*/}
         <Route path="/campusconnect/student-dashboard" element={<StudentPortal />} />
         <Route path="/campusconnect/batchrep-dashboard" element={<BatchRepPortal />} />
+
+        <Route path="/feedbacks" element={<SectionFeedbacks/>}/>
         
       </Routes>
     </Router>

@@ -13,7 +13,7 @@ public interface FeedbackRepository extends JpaRepository<Feedback, Long> {
 
     List<Feedback> findByUser_UserId(Long userId);
 
-    List<Feedback> findBySession_Program_Faculty_Name(String faculty);
+    List<Feedback> findBySession_Program_Faculty_FacultyName(String facultyName);
 
     List<Feedback> findBySession_Program_Name(String program);
 

@@ -16,6 +16,7 @@ import SectionRequests from "./SectionRequests";
 import SectionBatchReps from "./SectionBatchReps";
 import SectionEntities from "../../component2/pages/SectionEntites";
 import AnalyticsDashboard from "../../Component4/pages/Analyticsdashboard";
+import SectionFeedbacks from "./Sectionfeedbacks";
 import { ConfirmModal, ToastPopup } from "../components/AdminUiComponents";
 import myImage from "../../assets/sliit_logo.png";
 import sliitBg from "../../assets/sliit.jpg";
@@ -34,7 +35,7 @@ import {
   MessageSquare, Clock, Filter, Lock, Key, UserCog,
   AlertTriangle, Info, Building, Upload,
   FileText, Activity, Send, Users2, Camera, User,
-  Smartphone, AtSign, ShieldCheck, Edit3,
+  Smartphone, AtSign, ShieldCheck, Edit3, 
 } from "lucide-react";
 
 const SIDEBAR_GROUPS = [
@@ -42,7 +43,7 @@ const SIDEBAR_GROUPS = [
   { id:"people",     label:"People",     icon:UsersRound, children:[{ id:"users",         label:"Users",         icon:Users },{ id:"batchreps",label:"Batch Reps",icon:UserCheck }] },
   { id:"academic",   label:"Academic",   icon:BookMarked, children:[{ id:"entities",      label:"Entities",      icon:Building2 }] },
   { id:"operations", label:"Operations", icon:Briefcase,  children:[{ id:"requests",      label:"Requests",      icon:ClipboardList,badge:true }] },
-  //{ id:"analytics",  label:"Analytics",  icon:BarChart2,  children:[{ id:"reports",       label:"Reports",       icon:BarChart2 },{ id:"settings",label:"Settings",icon:Settings },{ id:"logs",label:"Logs",icon:ScrollText }] },
+  { id:"feedback",  label:"Feedback",  icon:BarChart2,  children:[{ id:"feedback",       label:"Feedback",       icon:BarChart2 }] },
 ];
 
 const INITIAL_FACULTIES = ["Computing","Business","Engineering","Humanities"];
@@ -751,7 +752,7 @@ export default function Admin() {
     case "entities":      return <SectionEntities      notify={notify} isDark={isDark}/>;
     case "notifications": return <SectionNotifications notify={notify} isDark={isDark}/>;
     case "reports":       return <SectionReports       isDark={isDark}/>;
-    case "settings":      return <SectionSettings      isDark={isDark}/>;
+    case "feedback":      return <SectionFeedbacks      isDark={isDark}/>;
     case "logs":          return <SectionLogs          isDark={isDark}/>;
     default:              return <div className={`text-center py-20 italic ${t.textMuted}`}>Section "{active}" coming soon…</div>;
   }};

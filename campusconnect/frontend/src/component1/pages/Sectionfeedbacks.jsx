@@ -18,31 +18,8 @@ import {
   X, User, Clock, Hash, Layers, Building2,
 } from "lucide-react";
 
-// ─── Re-use the same theme tokens as Admin.jsx ───────────────────
-const T = (isDark) => ({
-  pageBg:       isDark ? "bg-[#070C24]"       : "bg-slate-100",
-  cardBg:       isDark ? "bg-[#111B3D]"       : "bg-white",
-  cardBorder:   isDark ? "border-[#2B3E7A]"   : "border-gray-200",
-  innerBg:      isDark ? "bg-[#0B1230]"       : "bg-slate-50",
-  innerBorder:  isDark ? "border-[#1D2D68]"   : "border-gray-200",
-  rowHover:     isDark ? "hover:bg-[#1C2C5A]" : "hover:bg-blue-50",
-  rowAlt:       isDark ? "bg-[#0D1535]"       : "bg-slate-50/70",
-  textPrimary:  isDark ? "text-white"         : "text-gray-900",
-  textSecondary:isDark ? "text-slate-200"     : "text-gray-600",
-  textMuted:    isDark ? "text-slate-400"     : "text-gray-400",
-  textAccent:   isDark ? "text-sky-300"       : "text-blue-600",
-  inputBg:      isDark
-    ? "bg-[#0B1230] border-[#2B3E7A] text-white placeholder-slate-500"
-    : "bg-white border-gray-300 text-gray-900 placeholder-gray-400",
-  divider:      isDark ? "border-[#1D2D68]"   : "border-gray-200",
-  headerBg:     isDark ? "bg-[#111B3D]/95"    : "bg-white/95",
-  tableHead:    isDark ? "bg-[#0B1230] text-sky-300" : "bg-slate-50 text-gray-600",
-  modalBg:      isDark ? "bg-[#111B3D] border-[#2B3E7A]" : "bg-white border-gray-200",
-  modalHeader:  isDark ? "border-[#2B3E7A]"   : "border-gray-200",
-  modalClose:   isDark
-    ? "text-sky-300 hover:text-white hover:bg-[#1C2C5A]"
-    : "text-gray-400 hover:text-gray-700 hover:bg-gray-100",
-});
+import { StatCard, ThemedModal, T, StatusBadge } from "../components/AdminUiComponents";
+import { getAllUsers, deleteUser } from "../utils/C1api";
 
 // ─── Faculty catalogue (mirrors backend data) ───────────────────
 const FACULTIES = [
@@ -353,9 +330,10 @@ const ViewFaculties = ({ onSelect, isDark }) => {
               className={`group text-left ${t.cardBg} rounded-2xl border ${c.border} shadow-sm p-5 hover:shadow-lg hover:scale-[1.02] transition-all duration-200`}
             >
               <div className="flex items-start gap-3 mb-3">
-                <div className={`h-12 w-12 rounded-2xl flex items-center justify-center text-2xl ${c.bg} border ${c.border} shrink-0`}>
+                {/*<div className={`h-12 w-12 rounded-2xl flex items-center justify-center text-2xl ${c.bg} border ${c.border} shrink-0`}>
                   {fac.icon}
-                </div>
+                </div>*/}
+                
                 <div className="flex-1 min-w-0">
                   <p className={`font-bold text-sm leading-snug ${t.textPrimary}`}>{fac.name}</p>
                   <p className={`text-[10px] mt-1 ${t.textMuted}`}>
