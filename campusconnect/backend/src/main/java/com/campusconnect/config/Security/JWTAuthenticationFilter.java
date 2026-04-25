@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import com.campusconnect.service.component1.CustomUserDetailsService;
+import io.jsonwebtoken.JwtException;
 
 import java.io.IOException;
 
@@ -36,7 +37,13 @@ public class JWTAuthenticationFilter extends OncePerRequestFilter {
 
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             token = authHeader.substring(7);
-            username = jwtService.extractUsername(token);
+            try {
+                username = jwtService.extractUsername(token);
+            } catch (JwtException | IllegalArgumentException ex) {
+                // Ignore invalid/expired tokens and continue as unauthenticated.
+                // This keeps public endpoints accessible even if a stale token is sent.
+                username = null;
+            }
         }
 
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
@@ -51,7 +58,6 @@ public class JWTAuthenticationFilter extends OncePerRequestFilter {
                                 null,
                                 userDetails.getAuthorities()
                         );
-                        System.out.println("Authorities: " + userDetails.getAuthorities());
 
                 authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
