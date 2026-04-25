@@ -49,3 +49,17 @@ test('Successfuly submit a feedback', async ({ page }) => {
   await page.getByRole('button', { name: 'Send' }).click();
   await page.getByRole('button', { name: 'Close' }).click();
 });
+
+test('Successfuly Viewd the feedbacks form admin', async ({ page }) => {
+  await page.goto('http://localhost:5173/');
+  await page.getByRole('button', { name: 'Login / Register' }).click();
+  await page.getByRole('textbox', { name: 'Enter your username' }).click();
+  await page.getByRole('textbox', { name: 'Enter your username' }).fill('admin');
+  await page.getByRole('textbox', { name: 'Enter your password' }).click();
+  await page.getByRole('textbox', { name: 'Enter your password' }).fill('123456');
+  await page.getByRole('button', { name: 'Login' }).click();
+  await page.getByRole('button', { name: 'Feedback' }).click();
+  await page.getByRole('button', { name: '🏫 DSA mid support Session #3' }).click();
+  await page.getByRole('button', { name: /Positive \(\d+\)/ }).click();
+  await page.getByText('Positive').nth(4).click();
+});
