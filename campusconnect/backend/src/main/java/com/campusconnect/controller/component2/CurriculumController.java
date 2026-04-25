@@ -16,7 +16,7 @@ import java.util.List;
 public class CurriculumController {
     private final CurriculumService curriculumService;
 
-    @PreAuthorize("hasAnyAuthority('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/create")
     public CurriculumDtos.Response create(@Valid @RequestBody CurriculumDtos.Request request) {
         return curriculumService.create(request);
@@ -36,11 +36,6 @@ public class CurriculumController {
     @GetMapping("/all")
     public List<CurriculumDtos.Response> getAll() {
         return curriculumService.getAll();
-    }
-
-    @GetMapping("/getByProgram")
-    public List<CurriculumDtos.Response> getByProgram(@RequestParam Long programId) {
-        return curriculumService.getByProgram(programId);
     }
 
     @PreAuthorize("hasRole('ADMIN')")

@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5173"})
 @RestController
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
@@ -43,10 +44,5 @@ public class UserController {
     public void delete(@RequestParam Long userId) {
         userService.delete(userId);
     }
-
-    @GetMapping("/verify")
-    @PreAuthorize("hasAnyRole('ADMIN')")
-    public String verifyUser(@RequestParam String token) {
-        return userService.verifyUser(token);
-    }
 }
+

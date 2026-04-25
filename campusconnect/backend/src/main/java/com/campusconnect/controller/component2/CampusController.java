@@ -30,6 +30,18 @@
             return campusService.update(campusId, request);
         }
 
+        @PreAuthorize("hasRole('ADMIN')")
+        @PutMapping("/activate")
+        public CampusDtos.Response activate(@RequestParam Long campusId) {
+            return campusService.activate(campusId);
+        }
+
+        @PreAuthorize("hasRole('ADMIN')")
+        @PutMapping("/deactivate")
+        public CampusDtos.Response deactivate(@RequestParam Long campusId) {
+            return campusService.deactivate(campusId);
+        }
+
         @GetMapping("/getById")
         public CampusDtos.Response getById(@RequestParam Long campusId) {
             return campusService.getById(campusId);

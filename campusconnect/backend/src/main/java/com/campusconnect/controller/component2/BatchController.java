@@ -4,8 +4,6 @@ import com.campusconnect.dto.component2.BatchDtos;
 import com.campusconnect.service.component2.BatchService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,13 +15,11 @@ public class BatchController {
 
     private final BatchService batchService;
 
-    @PreAuthorize("hasAnyAuthority('BATCHREP','ADMIN')")
     @PostMapping("/create")
     public BatchDtos.Response create(@Valid @RequestBody BatchDtos.Request request) {
         return batchService.create(request);
     }
 
-    @PreAuthorize("hasAnyAuthority('BATCHREP','ADMIN')")
     @PutMapping("/update")
     public BatchDtos.Response update(
             @RequestParam Long batchId,
@@ -41,12 +37,6 @@ public class BatchController {
         return batchService.getAll();
     }
 
-    @GetMapping("/getByCurriculum")
-    public List<BatchDtos.Response> getByCurrulum(@RequestParam Long curriculumId) {
-        return batchService.getByCurriculum(curriculumId);
-    }
-
-    @PreAuthorize("hasAnyAuthority('BATCHREP','ADMIN')")
     @DeleteMapping("/delete")
     public void delete(@RequestParam Long batchId) {
         batchService.delete(batchId);
