@@ -177,7 +177,7 @@ export default function BatchRepLayout({ active, setActive, children }) {
                         {isDark?<Sun size={13} className="text-[#FFDE42]"/>:<Moon size={13}/>}
                         {isDark ? "Light Mode" : "Dark Mode"}
                       </button>
-                      <button onClick={()=>{ logout(); navigate("/admin/login",{replace:true}); }}
+                      <button onClick={()=>{ logout(); navigate("/campusconnect/login",{replace:true}); }}
                         className="w-full flex items-center gap-2 px-2 py-2 rounded-lg text-xs font-semibold text-red-400 hover:bg-red-500/10 transition-colors">
                         <LogOut size={13}/> Logout
                       </button>
