@@ -742,7 +742,7 @@ export default function Admin() {
   const notify=useCallback((type,message)=>setNotification({show:true,type,message}),[]);
   const t=T(isDark);
 
-  const handleLogout=()=>{setLogoutConfirm(false);setLogoutSuccessToast(true);setTimeout(()=>{logout?.();navigate("/campusconnect/admin",{replace:true});},2000);};
+  const handleLogout=()=>{setLogoutConfirm(false);setLogoutSuccessToast(true);setTimeout(()=>{logout?.();navigate("/campusconnect/login",{replace:true});},2000);};
 
   const renderContent=()=>{switch(active){
     case "dashboard":     return <AnalyticsDashboard/>

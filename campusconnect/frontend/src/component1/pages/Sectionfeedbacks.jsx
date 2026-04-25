@@ -1,134 +1,117 @@
 /**
  * SectionFeedbacks.jsx
- * Admin Portal — Feedback Module
+ * Admin Portal — Feedback Module (Session-Based)
  *
  * Flow:
- *  [Faculty Grid] → [Program Grid] → [Year Tabs + Semester Lists] → [Detail Modal]
+ *  [Sessions Grid] → click → [Feedback Side Panel / Modal]
  *
- * API base: /api/feedbacks
- * Theme: matches CampusConnect Admin Portal (T() tokens + isDark prop)
+ * API: getAllSessions(), getFeedbackBySession(sessionId), getAllFeedbacks()
  */
 
 import { useState, useEffect, useCallback } from "react";
-import axios from "axios";
 import {
-  MessageSquare, ChevronRight, ChevronLeft,
-  GraduationCap, BookOpen, Star, Calendar,
-  Loader2, AlertCircle, Filter, Eye,
-  X, User, Clock, Hash, Layers, Building2,
+  MessageSquare, ChevronRight, X,
+  Star, Calendar, Clock, MapPin,
+  Video, Loader2, AlertCircle,
+  ThumbsUp, ThumbsDown, Minus,
+  Hash, User, Search, Filter,
+  CheckCircle2, XCircle, Radio,
 } from "lucide-react";
 
-import { StatCard, ThemedModal, T, StatusBadge } from "../components/AdminUiComponents";
-import { getAllUsers, deleteUser } from "../utils/C1api";
+import { T } from "../components/AdminUiComponents";
+import { getAllFeedbacks, getFeedbackBySession } from "../utils/C1api";
+import {getAllSessions} from "../../component3/utils/studyGroupApi"
 
-// ─── Faculty catalogue (mirrors backend data) ───────────────────
-const FACULTIES = [
-  {
-    name: "Faculty of Computing",
-    icon: "💻",
-    colorKey: "blue",
-    programs: [
-      "Computer Science",
-      "Information Technology",
-      "Data Science",
-      "Network Engineering",
-      "Cyber Security",
-      "Software Engineering",
-    ],
-  },
-  {
-    name: "Faculty of Business",
-    icon: "📊",
-    colorKey: "amber",
-    programs: [
-      "Business Administration",
-      "Accounting & Finance",
-      "Marketing Management",
-      "Human Resource Management",
-    ],
-  },
-  {
-    name: "Faculty of Engineering",
-    icon: "⚙️",
-    colorKey: "teal",
-    programs: [
-      "Civil Engineering",
-      "Electrical Engineering",
-      "Mechanical Engineering",
-      "Electronic & Telecommunication",
-    ],
-  },
-  {
-    name: "Faculty of Humanities & Sciences",
-    icon: "🔬",
-    colorKey: "purple",
-    programs: [
-      "Psychology",
-      "Media Studies",
-      "English & Communication",
-      "Applied Mathematics",
-    ],
-  },
-  {
-    name: "Faculty of Architecture",
-    icon: "🏛️",
-    colorKey: "green",
-    programs: [
-      "Architecture",
-      "Interior Design",
-      "Urban Planning",
-    ],
-  },
-];
 
-// ─── Color palettes per faculty key (dark & light) ───────────────
-const PALETTE = {
-  blue:   { dark: { border:"border-blue-500/40",   bg:"bg-blue-500/10",   icon:"text-blue-400",   val:"text-blue-300",   badge:"bg-blue-500/20 text-blue-300 border-blue-500/40"   }, light: { border:"border-blue-200",   bg:"bg-blue-50",   icon:"text-blue-600",   val:"text-blue-700",   badge:"bg-blue-100 text-blue-700 border-blue-200"   } },
-  amber:  { dark: { border:"border-amber-500/40",  bg:"bg-amber-500/10",  icon:"text-amber-400",  val:"text-amber-300",  badge:"bg-amber-500/20 text-amber-300 border-amber-500/40"  }, light: { border:"border-amber-200",  bg:"bg-amber-50",  icon:"text-amber-600",  val:"text-amber-700",  badge:"bg-amber-100 text-amber-700 border-amber-200"  } },
-  teal:   { dark: { border:"border-teal-500/40",   bg:"bg-teal-500/10",   icon:"text-teal-400",   val:"text-teal-300",   badge:"bg-teal-500/20 text-teal-300 border-teal-500/40"   }, light: { border:"border-teal-200",   bg:"bg-teal-50",   icon:"text-teal-600",   val:"text-teal-700",   badge:"bg-teal-100 text-teal-700 border-teal-200"   } },
-  purple: { dark: { border:"border-purple-500/40", bg:"bg-purple-500/10", icon:"text-purple-400", val:"text-purple-300", badge:"bg-purple-500/20 text-purple-300 border-purple-500/40" }, light: { border:"border-purple-200", bg:"bg-purple-50", icon:"text-purple-600", val:"text-purple-700", badge:"bg-purple-100 text-purple-700 border-purple-200" } },
-  green:  { dark: { border:"border-emerald-500/40",bg:"bg-emerald-500/10",icon:"text-emerald-400",val:"text-emerald-300",badge:"bg-emerald-500/20 text-emerald-300 border-emerald-500/40"}, light: { border:"border-emerald-200",bg:"bg-emerald-50",icon:"text-emerald-600",val:"text-emerald-700",badge:"bg-emerald-100 text-emerald-700 border-emerald-200"} },
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+const fmtDate = (iso) => {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleDateString("en-US", {
+    weekday: "short", month: "short", day: "numeric", year: "numeric",
+  });
 };
-const pc = (isDark, key) => PALETTE[key]?.[isDark ? "dark" : "light"] ?? PALETTE.blue[isDark ? "dark" : "light"];
 
-// ─── Star rating display ─────────────────────────────────────────
-const StarRating = ({ rating = 0, max = 5 }) => (
-  <div className="flex gap-0.5">
-    {Array.from({ length: max }).map((_, i) => (
-      <Star
-        key={i}
-        size={13}
-        className={i < rating ? "text-[#FFDE42] fill-[#FFDE42]" : "text-slate-600"}
-      />
-    ))}
-  </div>
-);
+const fmt12h = (t) => {
+  if (!t) return "—";
+  const [h, m] = t.split(":");
+  const hour = parseInt(h, 10);
+  return `${hour % 12 || 12}:${m} ${hour >= 12 ? "PM" : "AM"}`;
+};
 
-// ─── Breadcrumb ──────────────────────────────────────────────────
-const Breadcrumb = ({ items, onNavigate, isDark }) => {
-  const t = T(isDark);
+const getSessionTemporal = (dateStr) => {
+  if (!dateStr) return "PAST";
+  const today = new Date().toISOString().slice(0, 10);
+  if (dateStr > today) return "UPCOMING";
+  if (dateStr < today) return "PAST";
+  return "TODAY";
+};
+
+// ─── Feedback type config ────────────────────────────────────────────────────
+
+const TYPE_CONFIG = {
+  POSITIVE: {
+    icon: ThumbsUp,
+    label: "Positive",
+    dark:  "bg-emerald-500/10 text-emerald-400 border-emerald-500/30",
+    light: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  },
+  NEGATIVE: {
+    icon: ThumbsDown,
+    label: "Negative",
+    dark:  "bg-rose-500/10 text-rose-400 border-rose-500/30",
+    light: "bg-rose-50 text-rose-700 border-rose-200",
+  },
+  NEUTRAL: {
+    icon: Minus,
+    label: "Neutral",
+    dark:  "bg-slate-500/10 text-slate-400 border-slate-500/30",
+    light: "bg-slate-50 text-slate-600 border-slate-200",
+  },
+};
+
+const typeConf = (type, isDark) => {
+  const conf = TYPE_CONFIG[type] ?? TYPE_CONFIG.NEUTRAL;
+  return { ...conf, cls: isDark ? conf.dark : conf.light };
+};
+
+// ─── Status badge ────────────────────────────────────────────────────────────
+
+const SessionStatusBadge = ({ status, isDark }) => {
+  const active = status === "ACTIVE";
   return (
-    <nav className="flex items-center gap-1.5 flex-wrap mb-5">
-      {items.map((item, i) => (
-        <span key={i} className="flex items-center gap-1.5">
-          {i > 0 && <ChevronRight size={12} className={t.textMuted} />}
-          {i < items.length - 1 ? (
-            <button
-              onClick={() => onNavigate(i)}
-              className="text-[#5478FF] hover:text-sky-400 text-xs font-semibold transition-colors"
-            >
-              {item}
-            </button>
-          ) : (
-            <span className={`text-xs font-bold ${t.textPrimary}`}>{item}</span>
-          )}
-        </span>
-      ))}
-    </nav>
+    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border flex items-center gap-1 ${
+      active
+        ? isDark
+          ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+          : "bg-emerald-50 text-emerald-700 border-emerald-200"
+        : isDark
+          ? "bg-rose-500/10 text-rose-400 border-rose-500/30"
+          : "bg-rose-50 text-rose-700 border-rose-200"
+    }`}>
+      {active ? <CheckCircle2 size={9} /> : <XCircle size={9} />}
+      {active ? "Active" : "Inactive"}
+    </span>
   );
 };
 
-// ─── Loading spinner ─────────────────────────────────────────────
+const TemporalBadge = ({ date, isDark }) => {
+  const temporal = getSessionTemporal(date);
+  const conf = {
+    TODAY:    { label: "Today",    cls: isDark ? "bg-amber-500/10 text-amber-400 border-amber-500/30" : "bg-amber-50 text-amber-700 border-amber-200" },
+    UPCOMING: { label: "Upcoming", cls: isDark ? "bg-blue-500/10 text-blue-400 border-blue-500/30"   : "bg-blue-50 text-blue-700 border-blue-200"   },
+    PAST:     { label: "Past",     cls: isDark ? "bg-slate-500/10 text-slate-400 border-slate-500/30" : "bg-slate-100 text-slate-500 border-slate-200" },
+  }[temporal];
+
+  return (
+    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${conf.cls}`}>
+      {conf.label}
+    </span>
+  );
+};
+
+// ─── Loading / Error / Empty ─────────────────────────────────────────────────
+
 const Loader = ({ isDark }) => {
   const t = T(isDark);
   return (
@@ -139,479 +122,511 @@ const Loader = ({ isDark }) => {
   );
 };
 
-// ─── Error state ─────────────────────────────────────────────────
 const ErrorState = ({ message, isDark }) => {
   const t = T(isDark);
   return (
-    <div className="flex flex-col items-center justify-center py-20 gap-3">
-      <AlertCircle size={28} className="text-rose-400" />
+    <div className="flex flex-col items-center justify-center py-16 gap-3">
+      <AlertCircle size={26} className="text-rose-400" />
       <p className={`text-sm font-semibold ${t.textPrimary}`}>Something went wrong</p>
       <p className={`text-xs ${t.textMuted}`}>{message}</p>
     </div>
   );
 };
 
-// ─── Empty state ─────────────────────────────────────────────────
-const EmptyState = ({ label, isDark }) => {
+const EmptyFeedbacks = ({ isDark }) => {
   const t = T(isDark);
   return (
-    <div className="flex flex-col items-center justify-center py-20 gap-3">
-      <MessageSquare size={32} className={t.textMuted} />
-      <p className={`text-sm ${t.textMuted}`}>{label ?? "No feedbacks found"}</p>
+    <div className="flex flex-col items-center justify-center py-16 gap-3">
+      <MessageSquare size={30} className={`${t.textMuted} opacity-40`} />
+      <p className={`text-sm font-semibold ${t.textPrimary}`}>No feedbacks yet</p>
+      <p className={`text-xs ${t.textMuted}`}>This session hasn't received any feedback.</p>
     </div>
   );
 };
 
-// ─── Feedback Detail Modal ───────────────────────────────────────
-const FeedbackDetailModal = ({ feedback, onClose, isDark }) => {
-  const t = T(isDark);
-  if (!feedback) return null;
+// ─── Feedback Item ───────────────────────────────────────────────────────────
 
+const FeedbackItem = ({ fb, isDark }) => {
+  const t = T(isDark);
+  const conf = typeConf(fb.feedbackType, isDark);
+  const Icon = conf.icon;
+
+  return (
+    <div className={`p-4 rounded-xl border ${isDark ? "border-[#2B3E7A] bg-[#0B1230]/60" : "border-gray-200 bg-gray-50/60"} flex flex-col gap-2.5`}>
+      {/* Top row */}
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <div className="flex items-center gap-2">
+          <div className={`h-7 w-7 rounded-lg flex items-center justify-center border ${conf.cls}`}>
+            <Icon size={12} />
+          </div>
+          <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${conf.cls}`}>
+            {conf.label}
+          </span>
+        </div>
+        <span className={`text-[10px] font-mono ${t.textMuted}`}>#{fb.feedbackId}</span>
+      </div>
+
+      {/* Message */}
+      {fb.message && (
+        <p className={`text-sm leading-relaxed ${t.textSecondary}`}>"{fb.message}"</p>
+      )}
+
+      {/* Meta row */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <span className={`text-[10px] flex items-center gap-1 ${t.textMuted}`}>
+          <User size={9} />
+          User #{fb.userId}
+        </span>
+        {fb.createdAt && (
+          <span className={`text-[10px] flex items-center gap-1 ${t.textMuted}`}>
+            <Clock size={9} />
+            {new Date(fb.createdAt).toLocaleString()}
+          </span>
+        )}
+        {fb.status && (
+          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full border ${
+            fb.status === "ACTIVE"
+              ? isDark ? "text-emerald-400 border-emerald-500/30 bg-emerald-500/10" : "text-emerald-700 border-emerald-200 bg-emerald-50"
+              : isDark ? "text-slate-400 border-slate-500/30 bg-slate-500/10"       : "text-slate-500 border-slate-200 bg-slate-100"
+          }`}>
+            {fb.status}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ─── Feedback Panel (slide-in) ───────────────────────────────────────────────
+
+const FeedbackPanel = ({ session, onClose, isDark }) => {
+  const t = T(isDark);
+
+  const [feedbacks, setFeedbacks] = useState([]);
+  const [loading,   setLoading]   = useState(true);
+  const [error,     setError]     = useState(null);
+  const [typeFilter, setTypeFilter] = useState("ALL");
+
+  useEffect(() => {
+    if (!session) return;
+    setLoading(true);
+    setError(null);
+    getFeedbackBySession(session.sessionId)
+      .then((res) => setFeedbacks(Array.isArray(res.data) ? res.data : []))
+      .catch((err) => setError(err?.response?.data?.message ?? "Failed to load feedbacks"))
+      .finally(() => setLoading(false));
+  }, [session?.sessionId]);
+
+  // Esc to close
   useEffect(() => {
     const h = (e) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
   }, [onClose]);
 
-  const Row = ({ icon: Icon, label, value }) => (
-    <div className={`flex items-start gap-3 py-2.5 border-b ${t.divider} last:border-0`}>
-      <div className="h-7 w-7 rounded-lg bg-[#5478FF]/15 flex items-center justify-center shrink-0 mt-0.5">
-        <Icon size={13} className="text-[#5478FF]" />
-      </div>
-      <div>
-        <p className={`text-[10px] font-bold uppercase tracking-wider ${t.textMuted}`}>{label}</p>
-        <p className={`text-sm font-semibold mt-0.5 ${t.textPrimary}`}>{value ?? "—"}</p>
-      </div>
-    </div>
-  );
+  if (!session) return null;
+
+  const isOnline = session.mode === "ONLINE";
+  const counts = {
+    POSITIVE: feedbacks.filter(f => f.feedbackType === "POSITIVE").length,
+    NEGATIVE: feedbacks.filter(f => f.feedbackType === "NEGATIVE").length,
+    NEUTRAL:  feedbacks.filter(f => f.feedbackType === "NEUTRAL").length,
+  };
+  const displayed = typeFilter === "ALL" ? feedbacks : feedbacks.filter(f => f.feedbackType === typeFilter);
 
   return (
     <>
-      <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
-        <div className={`pointer-events-auto w-full max-w-lg ${t.modalBg} rounded-2xl shadow-2xl overflow-hidden border`}>
-          {/* Header */}
-          <div className={`flex items-center justify-between px-6 py-4 border-b ${t.modalHeader} bg-gradient-to-r from-[#5478FF]/10 to-sky-500/10`}>
-            <div className="flex items-center gap-2.5">
-              <div className="h-8 w-8 rounded-xl bg-[#5478FF] flex items-center justify-center">
-                <MessageSquare size={14} className="text-white" />
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm transition-opacity"
+        onClick={onClose}
+      />
+
+      {/* Panel */}
+      <div className={`fixed right-0 top-0 bottom-0 z-50 w-full max-w-xl shadow-2xl flex flex-col ${
+        isDark ? "bg-[#060D24] border-l border-[#2B3E7A]" : "bg-white border-l border-gray-200"
+      }`}>
+        {/* Header */}
+        <div className={`px-6 py-4 border-b flex-shrink-0 ${
+          isDark ? "border-[#2B3E7A] bg-[#0B1230]" : "border-gray-200 bg-gray-50"
+        }`}>
+          <div className="flex items-start justify-between gap-3 mb-4">
+            <div className="flex items-center gap-3">
+              <div className={`h-10 w-10 rounded-xl flex items-center justify-center text-lg shrink-0 ${
+                isDark ? "bg-[#5478FF]/15 border border-[#5478FF]/30" : "bg-blue-50 border border-blue-200"
+              }`}>
+                {isOnline ? "💻" : "🏫"}
               </div>
               <div>
-                <p className={`font-bold text-sm ${t.textPrimary}`}>Feedback Detail</p>
-                <p className={`text-[10px] ${t.textMuted}`}>ID #{feedback.id}</p>
+                <p className={`font-bold text-sm leading-snug ${t.textPrimary}`}>{session.sessionName}</p>
+                <p className={`text-[10px] mt-0.5 ${t.textMuted}`}>Session #{session.sessionId}</p>
               </div>
             </div>
-            <button onClick={onClose} className={`p-1.5 rounded-lg transition-colors ${t.modalClose}`}>
+            <button
+              onClick={onClose}
+              className={`p-1.5 rounded-lg transition-colors ${
+                isDark ? "text-slate-400 hover:text-white hover:bg-white/10" : "text-gray-500 hover:text-gray-800 hover:bg-gray-200"
+              }`}
+            >
               <X size={16} />
             </button>
           </div>
 
-          {/* Body */}
-          <div className="px-6 py-5 space-y-1 max-h-[75vh] overflow-y-auto">
-            {/* Rating */}
-            <div className={`flex items-center justify-between p-3 rounded-xl ${t.innerBg} border ${t.innerBorder} mb-4`}>
-              <span className={`text-xs font-semibold ${t.textSecondary}`}>Rating</span>
-              <StarRating rating={feedback.rating ?? 0} />
+          {/* Session meta */}
+          <div className="grid grid-cols-2 gap-2 text-xs mb-4">
+            <div className={`flex items-center gap-1.5 ${t.textSecondary}`}>
+              <Calendar size={11} className="text-[#5478FF]" />
+              {fmtDate(session.sessionDate)}
             </div>
-
-            <Row icon={User}      label="Student / Author"  value={feedback.studentName ?? feedback.userId ?? "Anonymous"} />
-            <Row icon={Building2} label="Faculty"            value={feedback.faculty} />
-            <Row icon={BookOpen}  label="Program"            value={feedback.program} />
-            <Row icon={Layers}    label="Year & Semester"    value={`Year ${feedback.year} · Semester ${feedback.semester}`} />
-            <Row icon={Calendar}  label="Submitted"          value={feedback.submittedAt ? new Date(feedback.submittedAt).toLocaleString() : "—"} />
-            <Row icon={Hash}      label="Category"           value={feedback.category} />
-
-            {/* Comment */}
-            {feedback.comment && (
-              <div className={`mt-4 p-4 rounded-xl ${t.innerBg} border ${t.innerBorder}`}>
-                <p className={`text-[10px] font-bold uppercase tracking-wider mb-2 ${t.textMuted}`}>Comment</p>
-                <p className={`text-sm leading-relaxed ${t.textSecondary}`}>{feedback.comment}</p>
-              </div>
-            )}
+            <div className={`flex items-center gap-1.5 ${t.textSecondary}`}>
+              <Clock size={11} className="text-[#5478FF]" />
+              {fmt12h(session.startTime)} – {fmt12h(session.endTime)}
+            </div>
+            <div className={`flex items-center gap-1.5 ${t.textSecondary}`}>
+              {isOnline ? <Video size={11} className="text-purple-400" /> : <MapPin size={11} className="text-teal-400" />}
+              {isOnline ? (session.link || "Online") : (session.location || "In-person")}
+            </div>
+            <div className="flex items-center gap-1.5">
+              <TemporalBadge date={session.sessionDate} isDark={isDark} />
+              <SessionStatusBadge status={session.status} isDark={isDark} />
+            </div>
           </div>
+
+          {/* Sentiment summary */}
+          {!loading && !error && feedbacks.length > 0 && (
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { type: "POSITIVE", count: counts.POSITIVE, color: isDark ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400" : "border-emerald-200 bg-emerald-50 text-emerald-700" },
+                { type: "NEGATIVE", count: counts.NEGATIVE, color: isDark ? "border-rose-500/30 bg-rose-500/10 text-rose-400"         : "border-rose-200 bg-rose-50 text-rose-700"           },
+                { type: "NEUTRAL",  count: counts.NEUTRAL,  color: isDark ? "border-slate-500/30 bg-slate-500/10 text-slate-400"       : "border-slate-200 bg-slate-100 text-slate-500"      },
+              ].map(({ type, count, color }) => (
+                <div key={type} className={`flex flex-col items-center p-2 rounded-xl border ${color}`}>
+                  <span className="text-lg font-black">{count}</span>
+                  <span className="text-[10px] font-bold">{type[0] + type.slice(1).toLowerCase()}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Filter tabs */}
+        {!loading && !error && feedbacks.length > 0 && (
+          <div className={`px-6 py-3 border-b flex-shrink-0 flex items-center gap-2 flex-wrap ${
+            isDark ? "border-[#2B3E7A]" : "border-gray-200"
+          }`}>
+            {["ALL", "POSITIVE", "NEGATIVE", "NEUTRAL"].map((f) => (
+              <button
+                key={f}
+                onClick={() => setTypeFilter(f)}
+                className={`text-[11px] font-bold px-3 py-1.5 rounded-lg border transition-all ${
+                  typeFilter === f
+                    ? "bg-[#5478FF] text-white border-[#5478FF]"
+                    : isDark
+                      ? "border-[#2B3E7A] text-slate-400 hover:border-[#5478FF]/50 hover:text-white"
+                      : "border-gray-200 text-gray-500 hover:border-blue-300 hover:text-blue-700"
+                }`}
+              >
+                {f === "ALL" ? `All (${feedbacks.length})` : `${f[0] + f.slice(1).toLowerCase()} (${counts[f]})`}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Feedback list */}
+        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3">
+          {loading ? (
+            <Loader isDark={isDark} />
+          ) : error ? (
+            <ErrorState message={error} isDark={isDark} />
+          ) : feedbacks.length === 0 ? (
+            <EmptyFeedbacks isDark={isDark} />
+          ) : displayed.length === 0 ? (
+            <div className={`text-center py-10 text-sm ${t.textMuted}`}>No {typeFilter.toLowerCase()} feedbacks</div>
+          ) : (
+            displayed.map((fb) => (
+              <FeedbackItem key={fb.feedbackId} fb={fb} isDark={isDark} />
+            ))
+          )}
         </div>
       </div>
     </>
   );
 };
 
-// ─── Feedback Card (row in list) ─────────────────────────────────
-const FeedbackCard = ({ fb, onView, isDark }) => {
+// ─── Session Card ────────────────────────────────────────────────────────────
+
+const SessionCard = ({ session, feedbackCount, onClick, isDark }) => {
   const t = T(isDark);
+  const isOnline = session.mode === "ONLINE";
+  const temporal = getSessionTemporal(session.sessionDate);
+
   return (
-    <div
-      onClick={() => onView(fb)}
-      className={`group flex items-start gap-4 p-4 rounded-xl border ${t.cardBorder} ${t.cardBg} ${t.rowHover} transition-all cursor-pointer hover:border-[#5478FF]/50 hover:shadow-md`}
+    <button
+      onClick={onClick}
+      className={`group w-full text-left rounded-2xl border p-5 transition-all duration-200 hover:scale-[1.01] hover:shadow-lg hover:border-[#5478FF]/50 ${
+        isDark
+          ? "bg-[#0B1230] border-[#2B3E7A] hover:bg-[#0F1840]"
+          : "bg-white border-gray-200 hover:bg-blue-50/50"
+      } ${temporal === "TODAY" ? (isDark ? "border-amber-500/40" : "border-amber-300") : ""}`}
     >
-      <div className="h-10 w-10 rounded-xl bg-[#5478FF]/15 border border-[#5478FF]/30 flex items-center justify-center shrink-0">
-        <MessageSquare size={16} className="text-[#5478FF]" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between gap-2 flex-wrap mb-1">
-          <p className={`text-sm font-bold ${t.textPrimary} truncate`}>
-            {fb.studentName ?? fb.userId ?? `Feedback #${fb.id}`}
-          </p>
-          <StarRating rating={fb.rating ?? 0} />
+      {/* Top row */}
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <div className="flex items-center gap-3">
+          <div className={`h-9 w-9 rounded-xl flex items-center justify-center text-base shrink-0 ${
+            isDark ? "bg-[#5478FF]/10 border border-[#5478FF]/20" : "bg-blue-50 border border-blue-200"
+          }`}>
+            {isOnline ? "💻" : "🏫"}
+          </div>
+          <div className="min-w-0">
+            <p className={`text-sm font-bold leading-snug ${t.textPrimary} group-hover:text-[#5478FF] transition-colors`}>
+              {session.sessionName}
+            </p>
+            <p className={`text-[10px] mt-0.5 ${t.textMuted}`}>Session #{session.sessionId}</p>
+          </div>
         </div>
-        {fb.comment && (
-          <p className={`text-xs line-clamp-2 ${t.textSecondary}`}>{fb.comment}</p>
-        )}
-        <div className={`flex items-center gap-3 mt-2 flex-wrap`}>
-          {fb.category && (
-            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border bg-sky-500/10 text-sky-400 border-sky-500/30`}>
-              {fb.category}
-            </span>
-          )}
-          {fb.submittedAt && (
-            <span className={`text-[10px] flex items-center gap-1 ${t.textMuted}`}>
-              <Clock size={9} />
-              {new Date(fb.submittedAt).toLocaleDateString()}
-            </span>
-          )}
-          <span className={`text-[10px] font-mono ${t.textMuted}`}>#{fb.id}</span>
+        <ChevronRight size={15} className={`${t.textMuted} group-hover:text-[#5478FF] transition-colors shrink-0 mt-1`} />
+      </div>
+
+      {/* Meta */}
+      <div className="flex flex-col gap-1.5 mb-3">
+        <div className={`flex items-center gap-1.5 text-xs ${t.textSecondary}`}>
+          <Calendar size={11} className="text-[#5478FF] shrink-0" />
+          {fmtDate(session.sessionDate)}
+        </div>
+        <div className={`flex items-center gap-1.5 text-xs ${t.textSecondary}`}>
+          <Clock size={11} className="text-[#5478FF] shrink-0" />
+          {fmt12h(session.startTime)} – {fmt12h(session.endTime)}
+        </div>
+        <div className={`flex items-center gap-1.5 text-xs ${t.textSecondary}`}>
+          {isOnline
+            ? <Video size={11} className="text-purple-400 shrink-0" />
+            : <MapPin size={11} className="text-teal-400 shrink-0" />}
+          <span className="truncate">{isOnline ? (session.link || "Online") : (session.location || "In-person")}</span>
         </div>
       </div>
-      <Eye size={14} className={`${t.textMuted} group-hover:text-[#5478FF] transition-colors shrink-0 mt-1`} />
+
+      {/* Footer badges */}
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <TemporalBadge date={session.sessionDate} isDark={isDark} />
+          <SessionStatusBadge status={session.status} isDark={isDark} />
+        </div>
+
+        {/* Feedback count pill */}
+        <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full border text-[10px] font-bold ${
+          feedbackCount > 0
+            ? isDark ? "bg-[#5478FF]/15 text-[#8BA3FF] border-[#5478FF]/30" : "bg-blue-50 text-blue-700 border-blue-200"
+            : isDark ? "bg-slate-500/10 text-slate-500 border-slate-500/20" : "bg-gray-50 text-gray-400 border-gray-200"
+        }`}>
+          <MessageSquare size={9} />
+          {feedbackCount} feedback{feedbackCount !== 1 ? "s" : ""}
+        </div>
+      </div>
+    </button>
+  );
+};
+
+// ─── Stats Bar ───────────────────────────────────────────────────────────────
+
+const StatsBar = ({ sessions, allFeedbacks, isDark }) => {
+  const t = T(isDark);
+  const today = new Date().toISOString().slice(0, 10);
+
+  const stats = [
+    { label: "Total Sessions",  value: sessions.length },
+    { label: "Total Feedbacks", value: allFeedbacks.length },
+    { label: "Positive",        value: allFeedbacks.filter(f => f.feedbackType === "POSITIVE").length },
+    { label: "Negative",        value: allFeedbacks.filter(f => f.feedbackType === "NEGATIVE").length },
+  ];
+
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+      {stats.map((s) => (
+        <div key={s.label} className={`rounded-xl border px-4 py-3 ${
+          isDark ? "bg-[#0B1230] border-[#2B3E7A]" : "bg-white border-gray-200"
+        }`}>
+          <p className={`text-[10px] font-semibold uppercase tracking-wider mb-1 ${t.textMuted}`}>{s.label}</p>
+          <p className={`text-2xl font-black ${t.textPrimary}`}>{s.value}</p>
+        </div>
+      ))}
     </div>
   );
 };
 
-// ─── Semester Panel ──────────────────────────────────────────────
-const SemesterPanel = ({ semester, feedbacks, onView, isDark }) => {
-  const t = T(isDark);
-  return (
-    <div className={`${t.cardBg} rounded-2xl border ${t.cardBorder} shadow-sm overflow-hidden`}>
-      <div className={`px-5 py-3.5 border-b ${t.divider} flex items-center gap-3 bg-gradient-to-r from-[#5478FF]/8 to-transparent`}>
-        <div className="h-7 w-7 rounded-lg bg-[#5478FF] flex items-center justify-center shrink-0">
-          <span className="text-white text-[10px] font-black">S{semester}</span>
-        </div>
-        <div>
-          <p className={`font-bold text-sm ${t.textPrimary}`}>Semester {semester}</p>
-          <p className={`text-[10px] ${t.textMuted}`}>{feedbacks.length} feedback{feedbacks.length !== 1 ? "s" : ""}</p>
-        </div>
-      </div>
-      <div className="p-4 space-y-2.5">
-        {feedbacks.length === 0 ? (
-          <p className={`text-xs text-center py-6 ${t.textMuted}`}>No feedbacks for Semester {semester}</p>
-        ) : (
-          feedbacks.map((fb) => (
-            <FeedbackCard key={fb.id} fb={fb} onView={onView} isDark={isDark} />
-          ))
-        )}
-      </div>
-    </div>
-  );
-};
+// ═══════════════════════════════════════════════════════════════════════════════
+// ROOT EXPORT — SectionFeedbacks
+// ═══════════════════════════════════════════════════════════════════════════════
 
-// ═══════════════════════════════════════════════════════════════════
-// VIEW 1 — Faculty Grid
-// ═══════════════════════════════════════════════════════════════════
-const ViewFaculties = ({ onSelect, isDark }) => {
+export default function SectionFeedbacks({ isDark }) {
   const t = T(isDark);
+
+  const [sessions,     setSessions]     = useState([]);
+  const [allFeedbacks, setAllFeedbacks] = useState([]);
+  const [loading,      setLoading]      = useState(true);
+  const [error,        setError]        = useState(null);
+  const [selectedSession, setSelectedSession] = useState(null);
+
+  // Search + filter
+  const [search,       setSearch]       = useState("");
+  const [modeFilter,   setModeFilter]   = useState("ALL");   // ALL | ONLINE | OFFLINE
+  const [temporalFilter, setTemporalFilter] = useState("ALL"); // ALL | TODAY | UPCOMING | PAST
+
+  // Load sessions + all feedbacks in parallel
+  useEffect(() => {
+    setLoading(true);
+    Promise.all([getAllSessions(), getAllFeedbacks()])
+      .then(([sessRes, fbRes]) => {
+        const sess = Array.isArray(sessRes.data) ? sessRes.data : [];
+        const fbs  = Array.isArray(fbRes.data)  ? fbRes.data  : [];
+
+        // Sort: today → upcoming → past, then by date
+        const order = { TODAY: 0, UPCOMING: 1, PAST: 2 };
+        sess.sort((a, b) => {
+          const ta = order[getSessionTemporal(a.sessionDate)] ?? 3;
+          const tb = order[getSessionTemporal(b.sessionDate)] ?? 3;
+          return ta !== tb ? ta - tb : (a.sessionDate ?? "").localeCompare(b.sessionDate ?? "");
+        });
+
+        setSessions(sess);
+        setAllFeedbacks(fbs);
+      })
+      .catch((err) => setError(err?.response?.data?.message ?? "Failed to load data"))
+      .finally(() => setLoading(false));
+  }, []);
+
+  // Build per-session feedback count map
+  const feedbackCountMap = allFeedbacks.reduce((acc, fb) => {
+    acc[fb.sessionId] = (acc[fb.sessionId] ?? 0) + 1;
+    return acc;
+  }, {});
+
+  // Apply filters
+  const displayed = sessions.filter((s) => {
+    if (modeFilter !== "ALL" && s.mode !== modeFilter) return false;
+    if (temporalFilter !== "ALL" && getSessionTemporal(s.sessionDate) !== temporalFilter) return false;
+    if (search) {
+      const q = search.toLowerCase();
+      if (
+        !s.sessionName?.toLowerCase().includes(q) &&
+        !s.location?.toLowerCase().includes(q) &&
+        !String(s.sessionId).includes(q)
+      ) return false;
+    }
+    return true;
+  });
+
   return (
-    <div>
+    <div className={`min-h-full ${t.pageBg} p-6`}>
+      {/* Page header */}
       <div className="mb-6">
         <h2 className={`text-base font-black flex items-center gap-2 ${t.textPrimary}`}>
           <MessageSquare size={18} className="text-[#5478FF]" />
           Feedbacks
         </h2>
         <p className={`text-xs mt-0.5 ${t.textSecondary}`}>
-          Select a faculty to browse student feedback
+          Browse all study sessions and view student feedback for each
         </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {FACULTIES.map((fac) => {
-          const c = pc(isDark, fac.colorKey);
-          return (
-            <button
-              key={fac.name}
-              onClick={() => onSelect(fac)}
-              className={`group text-left ${t.cardBg} rounded-2xl border ${c.border} shadow-sm p-5 hover:shadow-lg hover:scale-[1.02] transition-all duration-200`}
-            >
-              <div className="flex items-start gap-3 mb-3">
-                {/*<div className={`h-12 w-12 rounded-2xl flex items-center justify-center text-2xl ${c.bg} border ${c.border} shrink-0`}>
-                  {fac.icon}
-                </div>*/}
-                
-                <div className="flex-1 min-w-0">
-                  <p className={`font-bold text-sm leading-snug ${t.textPrimary}`}>{fac.name}</p>
-                  <p className={`text-[10px] mt-1 ${t.textMuted}`}>
-                    {fac.programs.length} programs
-                  </p>
-                </div>
-                <ChevronRight size={16} className={`${t.textMuted} group-hover:text-[#5478FF] transition-colors shrink-0 mt-1`} />
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                {fac.programs.slice(0, 3).map((p) => (
-                  <span key={p} className={`text-[10px] px-2 py-0.5 rounded-full border font-semibold ${c.badge}`}>
-                    {p}
-                  </span>
-                ))}
-                {fac.programs.length > 3 && (
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full border font-semibold ${c.badge} opacity-60`}>
-                    +{fac.programs.length - 3} more
-                  </span>
-                )}
-              </div>
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-};
-
-// ═══════════════════════════════════════════════════════════════════
-// VIEW 2 — Program Grid for a Faculty
-// ═══════════════════════════════════════════════════════════════════
-const ViewPrograms = ({ faculty, onSelect, onBack, isDark }) => {
-  const t = T(isDark);
-  const c = pc(isDark, faculty.colorKey);
-
-  return (
-    <div>
-      {/* Back */}
-      <button
-        onClick={onBack}
-        className={`flex items-center gap-2 text-xs font-semibold ${t.textSecondary} hover:text-[#5478FF] transition-colors mb-5`}
-      >
-        <ChevronLeft size={15} />
-        Back to Faculties
-      </button>
-
-      <div className="flex items-center gap-3 mb-6">
-        <div className={`h-11 w-11 rounded-2xl text-xl flex items-center justify-center ${c.bg} border ${c.border}`}>
-          {faculty.icon}
-        </div>
-        <div>
-          <h2 className={`text-base font-black ${t.textPrimary}`}>{faculty.name}</h2>
-          <p className={`text-xs ${t.textMuted}`}>Select a program to view feedbacks</p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {faculty.programs.map((prog, i) => (
-          <button
-            key={prog}
-            onClick={() => onSelect(prog)}
-            className={`group text-left ${t.cardBg} rounded-xl border ${t.cardBorder} p-4 hover:border-[#5478FF]/60 hover:shadow-md hover:bg-[#5478FF]/5 transition-all duration-200`}
-          >
-            <div className="flex items-center gap-3">
-              <div className={`h-9 w-9 rounded-xl flex items-center justify-center text-sm font-black ${c.bg} ${c.icon} border ${c.border} shrink-0`}>
-                {i + 1}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className={`font-bold text-sm ${t.textPrimary} group-hover:text-[#5478FF] transition-colors`}>
-                  {prog}
-                </p>
-                <p className={`text-[10px] ${t.textMuted} mt-0.5`}>{faculty.name}</p>
-              </div>
-              <ChevronRight size={14} className={`${t.textMuted} group-hover:text-[#5478FF] transition-colors shrink-0`} />
-            </div>
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-// ═══════════════════════════════════════════════════════════════════
-// VIEW 3 — Year tabs → Semester panels for a Program
-// ═══════════════════════════════════════════════════════════════════
-const YEARS = [
-  { num: 1, label: "1st Year" },
-  { num: 2, label: "2nd Year" },
-  { num: 3, label: "3rd Year" },
-  { num: 4, label: "4th Year" },
-];
-
-const ViewFeedbacks = ({ faculty, program, onBack, isDark }) => {
-  const t = T(isDark);
-  const c = pc(isDark, faculty.colorKey);
-
-  const [selectedYear, setSelectedYear] = useState(1);
-
-  // feedbacksByYear[year][semester] = []
-  const [feedbacksByYear, setFeedbacksByYear] = useState({});
-  const [loadingYear, setLoadingYear]         = useState(false);
-  const [errorYear, setErrorYear]             = useState(null);
-  const [detailFb, setDetailFb]               = useState(null);
-
-  const loadYear = useCallback(async (year) => {
-    // If already loaded, skip
-    if (feedbacksByYear[year]) return;
-    setLoadingYear(true);
-    setErrorYear(null);
-    try {
-      // Fetch semester 1 and semester 2 in parallel
-      const token = localStorage.getItem("token");
-      const headers = token ? { Authorization: `Bearer ${token}` } : {};
-      const base = "http://localhost:8080";
-
-      const [r1, r2] = await Promise.all([
-        axios.get(
-          `${base}/api/feedbacks/program/${encodeURIComponent(program)}/year/${year}/semester/1`,
-          { headers }
-        ),
-        axios.get(
-          `${base}/api/feedbacks/program/${encodeURIComponent(program)}/year/${year}/semester/2`,
-          { headers }
-        ),
-      ]);
-
-      setFeedbacksByYear((prev) => ({
-        ...prev,
-        [year]: {
-          1: Array.isArray(r1.data) ? r1.data : [],
-          2: Array.isArray(r2.data) ? r2.data : [],
-        },
-      }));
-    } catch (err) {
-      setErrorYear(err.response?.data?.message ?? "Failed to load feedbacks");
-    } finally {
-      setLoadingYear(false);
-    }
-  }, [feedbacksByYear, program]);
-
-  // Load on mount & when year changes
-  useEffect(() => { loadYear(selectedYear); }, [selectedYear]);
-
-  const yearData = feedbacksByYear[selectedYear];
-  const sem1 = yearData?.[1] ?? [];
-  const sem2 = yearData?.[2] ?? [];
-  const total = sem1.length + sem2.length;
-
-  return (
-    <div>
-      {/* Back */}
-      <button
-        onClick={onBack}
-        className={`flex items-center gap-2 text-xs font-semibold ${t.textSecondary} hover:text-[#5478FF] transition-colors mb-5`}
-      >
-        <ChevronLeft size={15} />
-        Back to Programs
-      </button>
-
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4 mb-6 flex-wrap">
-        <div className="flex items-center gap-3">
-          <div className={`h-11 w-11 rounded-2xl text-xl flex items-center justify-center ${c.bg} border ${c.border}`}>
-            {faculty.icon}
-          </div>
-          <div>
-            <h2 className={`text-base font-black ${t.textPrimary}`}>{program}</h2>
-            <p className={`text-xs ${t.textMuted}`}>{faculty.name}</p>
-          </div>
-        </div>
-        {!loadingYear && yearData && (
-          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border ${c.border} ${c.bg}`}>
-            <MessageSquare size={13} className={c.icon} />
-            <span className={`text-xs font-bold ${c.icon}`}>{total} feedback{total !== 1 ? "s" : ""}</span>
-          </div>
-        )}
-      </div>
-
-      {/* Year tabs */}
-      <div className="flex gap-2 mb-6 flex-wrap">
-        {YEARS.map((y) => (
-          <button
-            key={y.num}
-            onClick={() => setSelectedYear(y.num)}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
-              selectedYear === y.num
-                ? "bg-[#5478FF] text-white border-[#5478FF] shadow-lg shadow-[#5478FF]/30"
-                : isDark
-                  ? "bg-[#0B1230] border-[#2B3E7A] text-slate-300 hover:border-[#5478FF]/50 hover:text-white"
-                  : "bg-white border-gray-200 text-gray-600 hover:border-blue-300 hover:text-blue-700"
-            }`}
-          >
-            {y.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Content */}
-      {loadingYear ? (
+      {loading ? (
         <Loader isDark={isDark} />
-      ) : errorYear ? (
-        <ErrorState message={errorYear} isDark={isDark} />
-      ) : !yearData ? (
-        <Loader isDark={isDark} />
-      ) : total === 0 ? (
-        <EmptyState label={`No feedbacks for Year ${selectedYear}`} isDark={isDark} />
+      ) : error ? (
+        <ErrorState message={error} isDark={isDark} />
       ) : (
-        <div className="grid lg:grid-cols-2 gap-5">
-          <SemesterPanel semester={1} feedbacks={sem1} onView={setDetailFb} isDark={isDark} />
-          <SemesterPanel semester={2} feedbacks={sem2} onView={setDetailFb} isDark={isDark} />
-        </div>
+        <>
+          {/* Stats */}
+          <StatsBar sessions={sessions} allFeedbacks={allFeedbacks} isDark={isDark} />
+
+          {/* Search + Filters */}
+          <div className="flex flex-col sm:flex-row gap-3 mb-5">
+            {/* Search */}
+            <div className="relative flex-1">
+              <Search size={13} className={`absolute left-3 top-1/2 -translate-y-1/2 ${t.textMuted}`} />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search sessions by name, location or ID…"
+                className={`w-full pl-9 pr-3 py-2.5 text-sm rounded-lg border outline-none transition-colors ${
+                  isDark
+                    ? "bg-[#0B1230] border-[#2B3E7A] text-white placeholder-slate-600 focus:border-[#5478FF]"
+                    : "bg-white border-gray-200 text-gray-900 placeholder-gray-400 focus:border-blue-400"
+                }`}
+              />
+            </div>
+
+            {/* Mode filter */}
+            <div className="flex gap-1">
+              {["ALL", "ONLINE", "OFFLINE"].map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setModeFilter(f)}
+                  className={`text-[11px] font-bold px-3 py-2 rounded-lg border transition-all whitespace-nowrap ${
+                    modeFilter === f
+                      ? "bg-[#5478FF] text-white border-[#5478FF]"
+                      : isDark
+                        ? "border-[#2B3E7A] text-slate-400 hover:border-[#5478FF]/50 hover:text-white"
+                        : "border-gray-200 text-gray-500 hover:border-blue-300 hover:text-blue-700 bg-white"
+                  }`}
+                >
+                  {f === "ALL" ? "All Modes" : f[0] + f.slice(1).toLowerCase()}
+                </button>
+              ))}
+            </div>
+
+            {/* Temporal filter */}
+            <div className="flex gap-1">
+              {["ALL", "TODAY", "UPCOMING", "PAST"].map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setTemporalFilter(f)}
+                  className={`text-[11px] font-bold px-3 py-2 rounded-lg border transition-all whitespace-nowrap ${
+                    temporalFilter === f
+                      ? "bg-[#5478FF] text-white border-[#5478FF]"
+                      : isDark
+                        ? "border-[#2B3E7A] text-slate-400 hover:border-[#5478FF]/50 hover:text-white"
+                        : "border-gray-200 text-gray-500 hover:border-blue-300 hover:text-blue-700 bg-white"
+                  }`}
+                >
+                  {f === "ALL" ? "All Time" : f[0] + f.slice(1).toLowerCase()}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Results count */}
+          <p className={`text-xs mb-4 ${t.textMuted}`}>
+            Showing <span className={`font-bold ${t.textPrimary}`}>{displayed.length}</span> of{" "}
+            <span className={`font-bold ${t.textPrimary}`}>{sessions.length}</span> sessions
+          </p>
+
+          {/* Sessions grid */}
+          {displayed.length === 0 ? (
+            <div className={`text-center py-20 ${t.textMuted}`}>
+              <MessageSquare size={32} className="mx-auto mb-3 opacity-30" />
+              <p className="text-sm">No sessions match your filters</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {displayed.map((session) => (
+                <SessionCard
+                  key={session.sessionId}
+                  session={session}
+                  feedbackCount={feedbackCountMap[session.sessionId] ?? 0}
+                  onClick={() => setSelectedSession(session)}
+                  isDark={isDark}
+                />
+              ))}
+            </div>
+          )}
+        </>
       )}
 
-      {/* Detail modal */}
-      <FeedbackDetailModal
-        feedback={detailFb}
-        onClose={() => setDetailFb(null)}
-        isDark={isDark}
-      />
-    </div>
-  );
-};
-
-// ═══════════════════════════════════════════════════════════════════
-// ROOT EXPORT — SectionFeedbacks
-// ═══════════════════════════════════════════════════════════════════
-export default function SectionFeedbacks({ isDark }) {
-  const t = T(isDark);
-
-  // Step: "faculty" | "program" | "feedbacks"
-  const [step, setStep]       = useState("faculty");
-  const [faculty, setFaculty] = useState(null);   // full faculty object
-  const [program, setProgram] = useState(null);   // string
-
-  const breadcrumbItems = () => {
-    const items = ["Feedbacks"];
-    if (faculty) items.push(faculty.name);
-    if (program) items.push(program);
-    return items;
-  };
-
-  const handleBreadcrumb = (index) => {
-    if (index === 0) { setStep("faculty"); setFaculty(null); setProgram(null); }
-    if (index === 1 && faculty) { setStep("program"); setProgram(null); }
-  };
-
-  return (
-    <div className={`min-h-full ${t.pageBg} p-6`}>
-      {/* Breadcrumb — only show when deeper than root */}
-      {step !== "faculty" && (
-        <Breadcrumb
-          items={breadcrumbItems()}
-          onNavigate={handleBreadcrumb}
-          isDark={isDark}
-        />
-      )}
-
-      {step === "faculty" && (
-        <ViewFaculties
-          onSelect={(fac) => { setFaculty(fac); setStep("program"); }}
-          isDark={isDark}
-        />
-      )}
-
-      {step === "program" && faculty && (
-        <ViewPrograms
-          faculty={faculty}
-          onSelect={(prog) => { setProgram(prog); setStep("feedbacks"); }}
-          onBack={() => { setStep("faculty"); setFaculty(null); }}
-          isDark={isDark}
-        />
-      )}
-
-      {step === "feedbacks" && faculty && program && (
-        <ViewFeedbacks
-          faculty={faculty}
-          program={program}
-          onBack={() => { setStep("program"); setProgram(null); }}
+      {/* Feedback side panel */}
+      {selectedSession && (
+        <FeedbackPanel
+          session={selectedSession}
+          onClose={() => setSelectedSession(null)}
           isDark={isDark}
         />
       )}
