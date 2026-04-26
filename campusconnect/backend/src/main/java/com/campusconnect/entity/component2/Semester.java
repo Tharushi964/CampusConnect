@@ -6,7 +6,12 @@ import java.time.LocalDate;
 
 @Data
 @Entity
-@Table(name = "semester")
+@Table(
+    name = "semester",
+    uniqueConstraints = {
+        @UniqueConstraint(columnNames = {"batch_id", "year_number", "semester_number"})
+    }
+)
 public class Semester {
 
     @Id

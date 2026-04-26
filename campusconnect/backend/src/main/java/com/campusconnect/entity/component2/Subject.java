@@ -5,7 +5,12 @@ import lombok.Data;
 
 @Data
 @Entity
-@Table(name = "subject")
+@Table(
+    name = "subject",
+    uniqueConstraints = {
+        @UniqueConstraint(columnNames = {"curriculum_id", "subject_code"})
+    }
+)
 public class Subject {
 
     @Id

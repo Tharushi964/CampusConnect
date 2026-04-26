@@ -4,12 +4,11 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 
 import com.campusconnect.entity.component1.User;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.campusconnect.entity.component2.Program;
-
 
 @Entity
 @Table(name = "session")
@@ -30,13 +29,17 @@ public class Session {
 
     private LocalTime endTime;
 
-    private String Mode;
+    private String mode;
 
     private String location;
 
-    private String Link;
+    private String link;
+
+    private String driveLink;
 
     private String status;
+
+    private LocalDateTime reminderSentAt;
 
     @ManyToOne
     @JoinColumn(name = "group_id")
@@ -47,13 +50,4 @@ public class Session {
     @JoinColumn(name = "created_by")
     @JsonIgnore
     private User createdBy;
-
-    @ManyToOne
-    @JoinColumn(name = "program_id")
-    private Program program;
-
-    private int year;
-    private int semester;
-
-
 }
