@@ -19,13 +19,5 @@ public interface FeedbackService {
     List<FeedbackDtos.Response> getAll();
 
     void delete(Long feedbackId);
-
-    List<FeedbackDtos.Response> getByFaculty(String faculty);
-
-    List<FeedbackDtos.Response> getByProgram(String program);
-
-    List<FeedbackDtos.Response> getByProgramAndYear(String program, int year);
-
-    List<FeedbackDtos.Response> getByProgramYearAndSemester(String program, int year, int semester);
 }
 
