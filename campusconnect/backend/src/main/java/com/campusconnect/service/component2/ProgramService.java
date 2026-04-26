@@ -11,8 +11,6 @@ public interface ProgramService {
 
     ProgramDtos.Response getById(Long programId);
 
-    List<ProgramDtos.Response> getByFacultyId(Long facultyId);
-
     List<ProgramDtos.Response> getAll();
 
     void delete(Long programId);

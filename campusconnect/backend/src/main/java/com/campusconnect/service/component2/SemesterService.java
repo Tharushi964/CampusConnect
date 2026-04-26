@@ -1,6 +1,7 @@
 package com.campusconnect.service.component2;
 
 import com.campusconnect.dto.component2.SemesterDtos;
+import com.campusconnect.entity.component2.Batch;
 
 import java.util.List;
 
@@ -13,8 +14,8 @@ public interface SemesterService {
 
     List<SemesterDtos.Response> getAll();
 
-    List<SemesterDtos.Response> getByBatch(Long batchId);
-
     void delete(Long semesterId);
+
+    void generateSemestersForBatch(Batch batch);
 }
 

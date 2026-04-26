@@ -24,6 +24,18 @@ public class SubjectServiceImpl implements SubjectService {
 
     @Override
     public SubjectDtos.Response create(SubjectDtos.Request request) {
+        if (request.curriculumId() == null || request.semesterId() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Curriculum and semester are required");
+        }
+
+        boolean duplicateExists = subjectRepository.existsByCurriculum_CurriculumIdAndSubjectCodeIgnoreCase(
+                request.curriculumId(),
+                request.subjectCode()
+        );
+        if (duplicateExists) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Subject code already exists in this curriculum");
+        }
+
         Curriculum curriculum = curriculumRepository.findById(request.curriculumId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Curriculum not found: " + request.curriculumId()));
         Semester semester = semesterRepository.findById(request.semesterId())
@@ -40,6 +52,19 @@ public class SubjectServiceImpl implements SubjectService {
 
     @Override
     public SubjectDtos.Response update(Long subjectId, SubjectDtos.Request request) {
+        if (request.curriculumId() == null || request.semesterId() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Curriculum and semester are required");
+        }
+
+        boolean duplicateExists = subjectRepository.existsByCurriculum_CurriculumIdAndSubjectCodeIgnoreCaseAndSubjectIdNot(
+                request.curriculumId(),
+                request.subjectCode(),
+                subjectId
+        );
+        if (duplicateExists) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Another subject with this code already exists in this curriculum");
+        }
+
         Subject subject = subjectRepository.findById(subjectId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Subject not found: " + subjectId));
 
