@@ -14,10 +14,22 @@ import Sidebar from "../components/SideBar";
 import SectionUsers from "./SectionUsers";
 import SectionRequests from "./SectionRequests";
 import SectionBatchReps from "./SectionBatchReps";
-import SectionEntities from "../../component2/pages/SectionEntites";
-import AnalyticsDashboard from "../../Component4/pages/Analyticsdashboard";
-import SectionFeedbacks from "./Sectionfeedbacks";
-import { ConfirmModal, ToastPopup } from "../components/AdminUiComponents";
+import {
+  activateCampus,
+  createCampus,
+  createBatch,
+  createCurriculum,
+  createSemester,
+  createSubject,
+  deactivateCampus,
+  getAllBatches,
+  getAllCampus,
+  getAllFeedbacks,
+  getAllCurriculums,
+  getAllPrograms,
+  getAllSemesters,
+  getSubjectsBySemester,
+} from "../utils/C1api";
 import myImage from "../../assets/sliit_logo.png";
 import sliitBg from "../../assets/sliit.jpg";
 
@@ -35,15 +47,15 @@ import {
   MessageSquare, Clock, Filter, Lock, Key, UserCog,
   AlertTriangle, Info, Building, Upload,
   FileText, Activity, Send, Users2, Camera, User,
-  Smartphone, AtSign, ShieldCheck, Edit3, 
+  Smartphone, AtSign, ShieldCheck, Edit3, Star,
 } from "lucide-react";
 
 const SIDEBAR_GROUPS = [
   { id:"overview",   label:"Overview",   icon:Home,       children:[{ id:"dashboard",    label:"Dashboard",    icon:LayoutDashboard }] },
   { id:"people",     label:"People",     icon:UsersRound, children:[{ id:"users",         label:"Users",         icon:Users },{ id:"batchreps",label:"Batch Reps",icon:UserCheck }] },
   { id:"academic",   label:"Academic",   icon:BookMarked, children:[{ id:"entities",      label:"Entities",      icon:Building2 }] },
-  { id:"operations", label:"Operations", icon:Briefcase,  children:[{ id:"requests",      label:"Requests",      icon:ClipboardList,badge:true }] },
-  { id:"feedback",  label:"Feedback",  icon:BarChart2,  children:[{ id:"feedback",       label:"Feedback",       icon:BarChart2 }] },
+  { id:"operations", label:"Operations", icon:Briefcase,  children:[{ id:"requests",      label:"Requests",      icon:ClipboardList,badge:true },{ id:"notifications",label:"Notifications",icon:Bell }] },
+  { id:"analytics",  label:"Analytics",  icon:BarChart2,  children:[{ id:"reports",       label:"Reports",       icon:BarChart2 },{ id:"feedback",label:"Feedback",icon:MessageSquare },{ id:"settings",label:"Settings",icon:Settings },{ id:"logs",label:"Logs",icon:ScrollText }] },
 ];
 
 const INITIAL_FACULTIES = ["Computing","Business","Engineering","Humanities"];
@@ -287,9 +299,44 @@ const ThemedField = ({ label, name, value, onChange, type="text", options, requi
   );
 };
 
+const ConfirmModal = ({ open, onClose, onConfirm, title, message, confirmLabel="Confirm", variant="primary", isDark }) => {
+  if(!open)return null;
+  const t = T(isDark);
+  const btnCls = variant==="danger"?"bg-red-500 hover:bg-red-600 text-white":variant==="success"?"bg-emerald-500 hover:bg-emerald-600 text-white":"bg-[#5478FF] hover:bg-[#4060ee] text-white";
+  return (
+    <>
+      <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm"/>
+      <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+        <div className={`w-full max-w-sm ${t.confirmBg} rounded-2xl shadow-2xl border ${t.cardBorder} overflow-hidden`}>
+          <div className="px-6 pt-6 pb-4">
+            <div className={`h-12 w-12 rounded-full flex items-center justify-center mx-auto mb-3 ${variant==="danger"?"bg-red-100":"bg-blue-100"}`}>
+              {variant==="danger"?<AlertTriangle size={22} className="text-red-600"/>:<Info size={22} className="text-blue-600"/>}
+            </div>
+            <h3 className={`font-bold text-base text-center ${t.textPrimary}`}>{title}</h3>
+            <p className={`text-sm text-center mt-1 ${t.textSecondary}`}>{message}</p>
+          </div>
+          <div className="px-6 pb-6 flex gap-3">
+            <button onClick={onClose} className={`flex-1 px-4 py-2.5 rounded-xl border text-sm font-semibold ${t.cardBorder} ${t.textSecondary} hover:opacity-80`}>Cancel</button>
+            <button onClick={onConfirm} className={`flex-1 px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${btnCls}`}>{confirmLabel}</button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+};
 
-
-
+const ToastPopup = ({ show, message, type="success", onClose }) => {
+  useEffect(()=>{ if(show){ const t=setTimeout(onClose,3500); return()=>clearTimeout(t); } },[show,onClose]);
+  if(!show)return null;
+  const styles = { success:"bg-emerald-600",error:"bg-red-600",info:"bg-[#5478FF]",warning:"bg-amber-500" };
+  const icons  = { success:<CheckCircle size={16}/>,error:<XCircle size={16}/>,info:<Info size={16}/>,warning:<AlertTriangle size={16}/> };
+  return (
+    <div className={`fixed top-5 right-5 z-[70] flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl text-white ${styles[type]}`}>
+      {icons[type]}<span className="text-sm font-semibold">{message}</span>
+      <button onClick={onClose} className="ml-2 opacity-70 hover:opacity-100"><X size={14}/></button>
+    </div>
+  );
+};
 
 const DARK_THEME_DIALOG = { statBg:"bg-[#111B3D]", border:"border-[#2B3E7A]", statText:"text-sky-300", cardBg:"bg-[#0B1230]" };
 
@@ -357,7 +404,582 @@ const STATUS_FLOW={PENDING:{next:["APPROVED","REJECTED"]},APPROVED:{next:[]},REJ
 // ═══════════════════════════════════════════════════════════════════
 // SECTION: ENTITIES
 // ═══════════════════════════════════════════════════════════════════
+const SectionEntities = ({ notify, isDark }) => {
+  const t=T(isDark);
+  const logoInputRef=useRef(null);
+  const[editing,setEditing]=useState(false);
+  const[logoSrc,setLogoSrc]=useState(null);
+  const[campus,setCampus]=useState({name:"Sri Lanka Institute of Information Technology",shortName:"SLIIT",established:"1999",type:"Non-state Degree-Awarding Institute",address:"New Kandy Rd, Malabe 10115, Sri Lanka",phone:"+94 11 754 4801",fax:"+94 11 754 4802",email:"info@sliit.lk",web:"www.sliit.lk",students:"16,000+",staff:"800+",accreditation:"UGC Approved",vision:"To be the leading technological university in Sri Lanka."});
+  const[draft,setDraft]=useState({...campus});
+  const[saveConfirm,setSaveConfirm]=useState(false);
+  const[toast,setToast]=useState({show:false,message:"",type:"success"});
+  const showToast=(msg,type="success")=>setToast({show:true,message:msg,type});
+  const hd=(e)=>setDraft(p=>({...p,[e.target.name]:e.target.value}));
+  const doSave=()=>{setCampus({...draft});setEditing(false);setSaveConfirm(false);showToast("Campus details updated!");};
+  const handleLogoChange=(e)=>{const file=e.target.files?.[0];if(!file)return;const r=new FileReader();r.onload=(ev)=>setLogoSrc(ev.target.result);r.readAsDataURL(file);};
+  const[faculties,setFaculties]=useState(INITIAL_FACULTIES);const[facModal,setFacModal]=useState(null);const[facForm,setFacForm]=useState("");const[facConfirm,setFacConfirm]=useState(null);
+  const saveFaculty=()=>{if(!facForm.trim())return;if(facModal.mode==="add")setFaculties(p=>[...p,facForm.trim()]);else setFaculties(p=>p.map((f,i)=>i===facModal.idx?facForm.trim():f));showToast(`Faculty ${facModal.mode==="add"?"added":"updated"}!`);setFacModal(null);setFacForm("");};
+  const deleteFaculty=(idx)=>{setFaculties(p=>p.filter((_,i)=>i!==idx));showToast("Faculty deleted.","info");setFacConfirm(null);};
+  const[programs,setPrograms]=useState(INITIAL_PROGRAMS);const[progModal,setProgModal]=useState(null);const[progForm,setProgForm]=useState({name:"",faculty:"Computing",duration:"4 yrs"});const[progConfirm,setProgConfirm]=useState(null);
+  const hp=(e)=>setProgForm(p=>({...p,[e.target.name]:e.target.value}));
+  const saveProgram=()=>{if(!progForm.name.trim())return;if(progModal.mode==="add")setPrograms(p=>[...p,{...progForm}]);else setPrograms(p=>p.map((pr,i)=>i===progModal.idx?{...progForm}:pr));showToast(`Program ${progModal.mode==="add"?"added":"updated"}!`);setProgModal(null);};
+  const deleteProgram=(idx)=>{setPrograms(p=>p.filter((_,i)=>i!==idx));showToast("Program deleted.","info");setProgConfirm(null);};
+  const MONTHS=["January","February","March","April","May","June","July","August","September","October","November","December"];
+  const[batches,setBatches]=useState([]);
+  const[semesters,setSemesters]=useState([]);
+  const[campuses,setCampuses]=useState([]);
+  const[curriculums,setCurriculums]=useState([]);
+  const[loadingAcademic,setLoadingAcademic]=useState(false);
+  const[savingAcademic,setSavingAcademic]=useState(false);
+  const[batchModalOpen,setBatchModalOpen]=useState(false);
+  const[semesterModalOpen,setSemesterModalOpen]=useState(false);
+  const[batchForm,setBatchForm]=useState({
+    batchName:"",
+    intakeYear:new Date().getFullYear(),
+    intakeMonth:MONTHS[new Date().getMonth()],
+    status:"ACTIVE",
+    campusId:"",
+    curriculumId:"",
+  });
+  const[semesterForm,setSemesterForm]=useState({
+    yearNumber:1,
+    semesterNumber:1,
+    startDate:"",
+    endDate:"",
+    status:"ACTIVE",
+    batchId:"",
+  });
+  const[campusModalOpen,setCampusModalOpen]=useState(false);
+  const[curriculumModalOpen,setCurriculumModalOpen]=useState(false);
+  const[subjectModalOpen,setSubjectModalOpen]=useState(false);
+  const[programCatalog,setProgramCatalog]=useState([]);
+  const[selectedSemesterId,setSelectedSemesterId]=useState("");
+  const[semesterSubjects,setSemesterSubjects]=useState([]);
+  const[campusForm,setCampusForm]=useState({campusName:"",location:"",status:"ACTIVE"});
+  const[curriculumForm,setCurriculumForm]=useState({
+    curriculumName:"",
+    version:"1.0",
+    createdYear:new Date().getFullYear(),
+    status:"ACTIVE",
+    programId:"",
+  });
+  const[subjectForm,setSubjectForm]=useState({
+    subjectCode:"",
+    subjectName:"",
+    credits:3,
+    curriculumId:"",
+    semesterId:"",
+  });
 
+  const loadAcademicData=async()=>{
+    setLoadingAcademic(true);
+    try{
+      const [batchesRes, semestersRes, campusesRes, curriculumsRes, programsRes] = await Promise.all([
+        getAllBatches(),
+        getAllSemesters(),
+        getAllCampus(),
+        getAllCurriculums(),
+        getAllPrograms(),
+      ]);
+
+      const batchData = batchesRes?.data ?? [];
+      const semesterData = semestersRes?.data ?? [];
+      const campusData = campusesRes?.data ?? [];
+      const curriculumData = curriculumsRes?.data ?? [];
+      const programData = programsRes?.data ?? [];
+
+      setBatches(batchData);
+      setSemesters(semesterData);
+      setCampuses(campusData);
+      setCurriculums(curriculumData);
+      setProgramCatalog(programData);
+
+      setBatchForm(prev => ({
+        ...prev,
+        campusId: prev.campusId || (campusData[0]?.campusId ? String(campusData[0].campusId) : ""),
+        curriculumId: prev.curriculumId || (curriculumData[0]?.curriculumId ? String(curriculumData[0].curriculumId) : ""),
+      }));
+
+      setSemesterForm(prev => ({
+        ...prev,
+        batchId: prev.batchId || (batchData[0]?.batchId ? String(batchData[0].batchId) : ""),
+      }));
+
+      setCurriculumForm(prev => ({
+        ...prev,
+        programId: prev.programId || (programData[0]?.programId ? String(programData[0].programId) : ""),
+      }));
+
+      setSubjectForm(prev => ({
+        ...prev,
+        curriculumId: prev.curriculumId || (curriculumData[0]?.curriculumId ? String(curriculumData[0].curriculumId) : ""),
+        semesterId: prev.semesterId || (semesterData[0]?.semesterId ? String(semesterData[0].semesterId) : ""),
+      }));
+
+      setSelectedSemesterId(prev => prev || (semesterData[0]?.semesterId ? String(semesterData[0].semesterId) : ""));
+    }catch(err){
+      const msg = err?.response?.data?.error ?? err?.response?.data?.message ?? "Failed to load batch and semester data.";
+      showToast(msg,"error");
+      notify?.("error", msg);
+    }finally{
+      setLoadingAcademic(false);
+    }
+  };
+
+  useEffect(()=>{loadAcademicData();},[]);
+
+  useEffect(()=>{
+    const loadSubjects = async () => {
+      if (!selectedSemesterId) {
+        setSemesterSubjects([]);
+        return;
+      }
+
+      try {
+        const res = await getSubjectsBySemester(Number(selectedSemesterId));
+        setSemesterSubjects(res?.data ?? []);
+      } catch {
+        setSemesterSubjects([]);
+      }
+    };
+
+    loadSubjects();
+  }, [selectedSemesterId]);
+
+  const getCampusName=(campusId)=>campuses.find(c=>String(c.campusId)===String(campusId))?.campusName ?? `Campus #${campusId}`;
+  const getBatchName=(batchId)=>batches.find(b=>String(b.batchId)===String(batchId))?.batchName ?? `Batch #${batchId}`;
+  const todayISO = new Date().toISOString().split("T")[0];
+
+  const saveBatch=async()=>{
+    if(!batchForm.batchName.trim() || !batchForm.campusId || !batchForm.curriculumId){
+      showToast("Batch name, campus, and curriculum are required.","warning");
+      return;
+    }
+
+    const duplicateBatch = batches.some(
+      (b) =>
+        String(b.campusId) === String(batchForm.campusId) &&
+        Number(b.intakeYear) === Number(batchForm.intakeYear) &&
+        String(b.intakeMonth).toLowerCase() === String(batchForm.intakeMonth).toLowerCase()
+    );
+
+    if (duplicateBatch) {
+      showToast("Duplicate batch for selected campus and intake period.", "warning");
+      return;
+    }
+
+    setSavingAcademic(true);
+    try{
+      await createBatch({
+        batchName:batchForm.batchName.trim(),
+        intakeYear:Number(batchForm.intakeYear),
+        intakeMonth:batchForm.intakeMonth,
+        status:batchForm.status,
+        campusId:Number(batchForm.campusId),
+        curriculumId:Number(batchForm.curriculumId),
+      });
+
+      setBatchModalOpen(false);
+      setBatchForm(prev=>({
+        ...prev,
+        batchName:"",
+      }));
+      showToast("Batch created successfully with auto-generated semesters!");
+      notify?.("success", "Batch created successfully with auto-generated semesters!");
+      await loadAcademicData();
+    }catch(err){
+      const msg = err?.response?.data?.error ?? err?.response?.data?.message ?? "Failed to create batch.";
+      showToast(msg,"error");
+      notify?.("error", msg);
+    }finally{
+      setSavingAcademic(false);
+    }
+  };
+
+  const saveCampus = async () => {
+    if (!campusForm.campusName.trim() || !campusForm.location.trim()) {
+      showToast("Campus name and location are required.", "warning");
+      return;
+    }
+
+    setSavingAcademic(true);
+    try {
+      await createCampus({
+        campusName: campusForm.campusName.trim(),
+        location: campusForm.location.trim(),
+        status: campusForm.status,
+      });
+      showToast("Campus created successfully!");
+      notify?.("success", "Campus created successfully!");
+      setCampusModalOpen(false);
+      setCampusForm({ campusName: "", location: "", status: "ACTIVE" });
+      await loadAcademicData();
+    } catch (err) {
+      const msg = err?.response?.data?.error ?? err?.response?.data?.message ?? "Failed to create campus.";
+      showToast(msg, "error");
+      notify?.("error", msg);
+    } finally {
+      setSavingAcademic(false);
+    }
+  };
+
+  const toggleCampusStatus = async (campusItem) => {
+    setSavingAcademic(true);
+    try {
+      if (String(campusItem.status).toUpperCase() === "ACTIVE") {
+        await deactivateCampus(campusItem.campusId);
+        showToast("Campus deactivated.", "info");
+      } else {
+        await activateCampus(campusItem.campusId);
+        showToast("Campus activated.");
+      }
+      await loadAcademicData();
+    } catch (err) {
+      const msg = err?.response?.data?.error ?? err?.response?.data?.message ?? "Failed to update campus status.";
+      showToast(msg, "error");
+      notify?.("error", msg);
+    } finally {
+      setSavingAcademic(false);
+    }
+  };
+
+  const saveCurriculum = async () => {
+    if (!curriculumForm.curriculumName.trim() || !curriculumForm.programId) {
+      showToast("Curriculum name and program are required.", "warning");
+      return;
+    }
+
+    const duplicateCurriculum = curriculums.some(
+      (c) =>
+        String(c.programId) === String(curriculumForm.programId) &&
+        String(c.curriculumName).toLowerCase() === String(curriculumForm.curriculumName).toLowerCase()
+    );
+
+    if (duplicateCurriculum) {
+      showToast("Duplicate curriculum name for selected program.", "warning");
+      return;
+    }
+
+    setSavingAcademic(true);
+    try {
+      await createCurriculum({
+        curriculumName: curriculumForm.curriculumName.trim(),
+        version: curriculumForm.version,
+        createdYear: Number(curriculumForm.createdYear),
+        status: curriculumForm.status,
+        programId: Number(curriculumForm.programId),
+      });
+      showToast("Curriculum created successfully!");
+      notify?.("success", "Curriculum created successfully!");
+      setCurriculumModalOpen(false);
+      setCurriculumForm((prev) => ({
+        ...prev,
+        curriculumName: "",
+        version: "1.0",
+      }));
+      await loadAcademicData();
+    } catch (err) {
+      const msg = err?.response?.data?.error ?? err?.response?.data?.message ?? "Failed to create curriculum.";
+      showToast(msg, "error");
+      notify?.("error", msg);
+    } finally {
+      setSavingAcademic(false);
+    }
+  };
+
+  const saveSubject = async () => {
+    if (!subjectForm.subjectCode.trim() || !subjectForm.subjectName.trim() || !subjectForm.curriculumId || !subjectForm.semesterId) {
+      showToast("Subject code, name, curriculum and semester are required.", "warning");
+      return;
+    }
+
+    setSavingAcademic(true);
+    try {
+      await createSubject({
+        subjectCode: subjectForm.subjectCode.trim(),
+        subjectName: subjectForm.subjectName.trim(),
+        credits: Number(subjectForm.credits),
+        curriculumId: Number(subjectForm.curriculumId),
+        semesterId: Number(subjectForm.semesterId),
+      });
+      showToast("Subject created and assigned successfully!");
+      notify?.("success", "Subject created and assigned successfully!");
+      setSubjectModalOpen(false);
+      setSubjectForm((prev) => ({
+        ...prev,
+        subjectCode: "",
+        subjectName: "",
+        credits: 3,
+      }));
+      setSelectedSemesterId(String(subjectForm.semesterId));
+    } catch (err) {
+      const msg = err?.response?.data?.error ?? err?.response?.data?.message ?? "Failed to create subject.";
+      showToast(msg, "error");
+      notify?.("error", msg);
+    } finally {
+      setSavingAcademic(false);
+    }
+  };
+
+  const saveSemester=async()=>{
+    if(!semesterForm.batchId || !semesterForm.startDate || !semesterForm.endDate){
+      showToast("Batch, start date and end date are required.","warning");
+      return;
+    }
+
+    if(semesterForm.startDate < todayISO){
+      showToast("Semester start date cannot be in the past.","warning");
+      return;
+    }
+
+    if(semesterForm.endDate < semesterForm.startDate){
+      showToast("Semester end date must be on or after the start date.","warning");
+      return;
+    }
+
+    setSavingAcademic(true);
+    try{
+      await createSemester({
+        yearNumber:Number(semesterForm.yearNumber),
+        semesterNumber:Number(semesterForm.semesterNumber),
+        startDate:semesterForm.startDate,
+        endDate:semesterForm.endDate,
+        status:semesterForm.status,
+        batchId:Number(semesterForm.batchId),
+      });
+
+      setSemesterModalOpen(false);
+      setSemesterForm(prev=>({
+        ...prev,
+        startDate:"",
+        endDate:"",
+      }));
+      showToast("Semester created successfully!");
+      notify?.("success", "Semester created successfully!");
+      await loadAcademicData();
+    }catch(err){
+      const msg = err?.response?.data?.error ?? err?.response?.data?.message ?? "Failed to create semester.";
+      showToast(msg,"error");
+      notify?.("error", msg);
+    }finally{
+      setSavingAcademic(false);
+    }
+  };
+
+  const EntityModal=({open,onClose,title,children})=>{useEffect(()=>{if(!open)return;const h=(e)=>e.key==="Escape"&&onClose();window.addEventListener("keydown",h);return()=>window.removeEventListener("keydown",h);},[open,onClose]);if(!open)return null;return(<><div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" onClick={onClose}/><div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"><div className={`pointer-events-auto w-full max-w-md ${t.modalBg} rounded-2xl shadow-2xl overflow-hidden border`}><div className={`flex items-center justify-between px-5 py-4 border-b ${t.modalHeader}`}><p className={`font-bold text-sm ${t.textPrimary}`}>{title}</p><button onClick={onClose} className={`p-1 rounded-lg ${t.modalClose}`}><X size={15}/></button></div><div className="px-5 py-4">{children}</div></div></div></>);};
+  const InfoRow=({icon:Icon,label,value,cls="text-sky-500"})=>(<div className="flex items-start gap-3"><div className={`mt-0.5 shrink-0 ${cls}`}><Icon size={14}/></div><div><p className={`text-[10px] font-bold uppercase tracking-wider ${t.textMuted}`}>{label}</p><p className={`text-sm font-semibold leading-tight ${t.textPrimary}`}>{value}</p></div></div>);
+  const CampusField=({label,name,value,onChange,textarea=false})=>(<div><label className={`block text-[10px] font-bold uppercase tracking-wider mb-1 ${t.textMuted}`}>{label}</label>{textarea?<textarea name={name} value={value} onChange={onChange} rows={2} className={`w-full p-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#5478FF]/40 resize-none ${t.inputBg}`}/>:<input name={name} value={value} onChange={onChange} className={`w-full p-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#5478FF]/40 ${t.inputBg}`}/>}</div>);
+  const effectiveLogo=logoSrc||myImage;
+  const CHIP_COLORS=[{c:"text-sky-400 bg-sky-500/15 border-sky-500/40"},{c:"text-purple-400 bg-purple-500/15 border-purple-500/40"},{c:"text-amber-400 bg-amber-500/15 border-amber-500/40"},{c:"text-teal-400 bg-teal-500/15 border-teal-500/40"}];
+  const CHIP_COLORS_L=[{c:"text-sky-700 bg-sky-50 border-sky-200"},{c:"text-purple-700 bg-purple-50 border-purple-200"},{c:"text-amber-700 bg-amber-50 border-amber-200"},{c:"text-teal-700 bg-teal-50 border-teal-200"}];
+  const chips=[{label:"Students",value:campus.students},{label:"Staff",value:campus.staff},{label:"Faculties",value:faculties.length},{label:"Programs",value:programs.length}];
+
+  return (
+    <div className={`space-y-6 ${t.pageBg} min-h-screen p-6`}>
+      <ToastPopup show={toast.show} message={toast.message} type={toast.type} onClose={()=>setToast(p=>({...p,show:false}))}/>
+      <div className={`${t.cardBg} rounded-2xl border ${t.cardBorder} shadow-sm overflow-hidden`}>
+        <div className="h-28 relative bg-center bg-cover" style={{backgroundImage:`url(${sliitBg})`,backgroundPosition:"center 45%"}}>
+          <div className="absolute inset-0 bg-black/40"/>
+          {!editing&&<button onClick={()=>{setDraft({...campus});setEditing(true);}} className="absolute top-3 right-3 z-10 flex items-center gap-1.5 px-3 py-1.5 bg-black/50 hover:bg-black/70 text-white rounded-xl text-xs font-bold backdrop-blur-md border border-white/20"><Pencil size={12}/>Edit Details</button>}
+        </div>
+        <div className="px-6 pb-6 pt-2">
+          <div className="flex items-end gap-4 -mt-12 mb-5">
+            <div className="relative group shrink-0">
+              <div className="h-24 w-24 rounded-2xl bg-white border-4 border-white shadow-xl overflow-hidden flex items-center justify-center"><img src={effectiveLogo} alt="SLIIT Logo" className="h-full w-full object-contain p-1" onError={e=>{e.target.onerror=null;e.target.src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 80'%3E%3Crect width='80' height='80' fill='%235478FF' rx='12'/%3E%3Ctext x='40' y='52' font-size='22' text-anchor='middle' fill='white' font-weight='bold'%3ESL%3C/text%3E%3C/svg%3E";}}/></div>
+              <button onClick={()=>logoInputRef.current?.click()} className="absolute inset-0 rounded-2xl bg-black/55 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"><div className="text-white text-center"><Camera size={18} className="mx-auto"/><span className="text-[9px] font-bold block mt-0.5">Change</span></div></button>
+              <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoChange}/>
+            </div>
+            <div className="pb-1 flex-1 min-w-0">
+              <h2 className={`font-black text-xl leading-tight ${t.textPrimary}`}>{campus.name}</h2>
+              <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                <span className="text-xs font-bold text-[#5478FF] bg-[#5478FF]/15 px-2.5 py-0.5 rounded-full border border-[#5478FF]/40">{campus.shortName}</span>
+                <span className={`text-xs ${t.textSecondary}`}>Est. {campus.established}</span>
+                <span className="text-xs font-semibold text-emerald-500 bg-emerald-500/15 px-2.5 py-0.5 rounded-full border border-emerald-500/40">{campus.accreditation}</span>
+              </div>
+            </div>
+          </div>
+          <div className="flex gap-3 mb-6 flex-wrap">
+            {chips.map((s,i)=>{const c=isDark?CHIP_COLORS[i].c:CHIP_COLORS_L[i].c;return(<div key={s.label} className={`flex items-center gap-2 px-4 py-2 rounded-xl border ${c}`}><span className={`text-2xl font-black`}>{s.value}</span><span className="text-[10px] font-bold uppercase tracking-wider opacity-80">{s.label}</span></div>);})}
+          </div>
+          {!editing&&(<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            <InfoRow icon={MapPin}        label="Address" value={campus.address}/>
+            <InfoRow icon={Phone}         label="Phone"   value={campus.phone}   cls="text-sky-500"/>
+            <InfoRow icon={Mail}          label="Email"   value={campus.email}   cls="text-purple-500"/>
+            <InfoRow icon={Globe}         label="Website" value={campus.web}     cls="text-teal-500"/>
+            <InfoRow icon={Building2}     label="Type"    value={campus.type}    cls="text-[#5478FF]"/>
+            <InfoRow icon={GraduationCap} label="Vision"  value={campus.vision}  cls="text-amber-500"/>
+          </div>)}
+          {editing&&(<div className={`${t.innerBg} rounded-2xl border ${t.innerBorder} p-5`}>
+            <p className={`text-xs font-black uppercase tracking-wider mb-4 flex items-center gap-1.5 ${t.textMuted}`}><Edit3 size={12}/>Editing Campus Details</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+              <CampusField label="Full Name" name="name" value={draft.name} onChange={hd}/><CampusField label="Short Name" name="shortName" value={draft.shortName} onChange={hd}/>
+              <CampusField label="Established" name="established" value={draft.established} onChange={hd}/><CampusField label="Inst. Type" name="type" value={draft.type} onChange={hd}/>
+              <CampusField label="Phone" name="phone" value={draft.phone} onChange={hd}/><CampusField label="Fax" name="fax" value={draft.fax} onChange={hd}/>
+              <CampusField label="Email" name="email" value={draft.email} onChange={hd}/><CampusField label="Website" name="web" value={draft.web} onChange={hd}/>
+              <CampusField label="Students" name="students" value={draft.students} onChange={hd}/><CampusField label="Staff" name="staff" value={draft.staff} onChange={hd}/>
+              <CampusField label="Accreditation" name="accreditation" value={draft.accreditation} onChange={hd}/>
+            </div>
+            <CampusField label="Address" name="address" value={draft.address} onChange={hd}/>
+            <div className="mt-3"><CampusField label="Vision Statement" name="vision" value={draft.vision} onChange={hd} textarea/></div>
+            <div className={`mt-4 p-3 ${t.cardBg} rounded-xl border ${t.cardBorder} flex items-center gap-4`}>
+              <img src={effectiveLogo} alt="logo" className="h-12 w-12 object-contain rounded-xl border border-white/10 p-1"/>
+              <div><p className={`text-xs font-bold mb-1 ${t.textPrimary}`}>Campus Logo</p><button onClick={()=>logoInputRef.current?.click()} className="flex items-center gap-1.5 px-3 py-1.5 bg-[#5478FF] text-white rounded-xl text-xs font-bold hover:bg-[#4060ee]"><Upload size={12}/>Upload</button></div>
+            </div>
+            <div className="flex justify-end gap-2 mt-4">
+              <button onClick={()=>setEditing(false)} className={`px-4 py-2 rounded-xl border text-sm font-semibold ${t.cardBorder} ${t.textSecondary} hover:opacity-80`}>Cancel</button>
+              <button onClick={()=>setSaveConfirm(true)} className="px-4 py-2 rounded-xl bg-[#5478FF] text-white text-sm font-semibold hover:bg-[#4060ee] shadow-sm">Save Changes</button>
+            </div>
+          </div>)}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className={`${t.cardBg} rounded-2xl border ${t.cardBorder} shadow-sm overflow-hidden`}>
+          <div className={`flex items-center justify-between px-5 py-4 border-b ${t.divider}`}>
+            <div className="flex items-center gap-2.5"><div className="h-8 w-8 rounded-xl bg-amber-500/15 border border-amber-500/40 flex items-center justify-center"><GraduationCap size={16} className="text-amber-500"/></div><div><p className={`font-bold text-sm ${t.textPrimary}`}>Faculties</p><p className={`text-[10px] ${t.textMuted}`}>{faculties.length} registered</p></div></div>
+            <button onClick={()=>{setFacForm("");setFacModal({mode:"add"});}} className="flex items-center gap-1 px-3 py-1.5 bg-[#5478FF] text-white rounded-xl text-xs font-bold hover:bg-[#4060ee] shadow-sm"><Plus size={12}/>Add</button>
+          </div>
+          <div className="p-4 space-y-2">
+            {faculties.length===0?<p className={`text-center text-sm py-6 ${t.textMuted}`}>No faculties</p>
+            :faculties.map((f,i)=>(<div key={i} className={`flex items-center justify-between px-4 py-3 ${t.innerBg} rounded-xl border ${t.innerBorder} hover:border-amber-400/50 transition-all group`}><div className="flex items-center gap-3"><span className="h-2 w-2 rounded-full bg-amber-500 shrink-0"/><span className={`text-sm font-semibold ${t.textPrimary}`}>{f}</span></div><div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity"><button onClick={()=>{setFacForm(f);setFacModal({mode:"edit",idx:i});}} className="p-1.5 rounded-lg text-sky-500 hover:bg-sky-500/10"><Pencil size={13}/></button><button onClick={()=>setFacConfirm(i)} className="p-1.5 rounded-lg text-red-500 hover:bg-red-500/10"><Trash2 size={13}/></button></div></div>))}
+          </div>
+        </div>
+        <div className={`${t.cardBg} rounded-2xl border ${t.cardBorder} shadow-sm overflow-hidden`}>
+          <div className={`flex items-center justify-between px-5 py-4 border-b ${t.divider}`}>
+            <div className="flex items-center gap-2.5"><div className="h-8 w-8 rounded-xl bg-purple-500/15 border border-purple-500/40 flex items-center justify-center"><BookOpen size={16} className="text-purple-500"/></div><div><p className={`font-bold text-sm ${t.textPrimary}`}>Programs</p><p className={`text-[10px] ${t.textMuted}`}>{programs.length} registered</p></div></div>
+            <button onClick={()=>{setProgForm({name:"",faculty:faculties[0]??"Computing",duration:"4 yrs"});setProgModal({mode:"add"});}} className="flex items-center gap-1 px-3 py-1.5 bg-[#5478FF] text-white rounded-xl text-xs font-bold hover:bg-[#4060ee] shadow-sm"><Plus size={12}/>Add</button>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead><tr className={`${t.tableHead} text-[10px] uppercase tracking-wider border-b ${t.divider}`}>{["Program","Faculty","Duration","Actions"].map(h=><th key={h} className="px-4 py-2.5 text-left font-semibold">{h}</th>)}</tr></thead>
+              <tbody>
+                {programs.length===0?<tr><td colSpan={4} className={`py-8 text-center text-sm ${t.textMuted}`}>No programs</td></tr>
+                :programs.map((p,i)=>(<tr key={i} className={`border-t ${t.divider} ${i%2===1?t.rowAlt:""} ${t.rowHover} transition-colors group`}>
+                  <td className="px-4 py-2.5"><div className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-purple-500 shrink-0"/><span className={`font-semibold text-xs ${t.textPrimary}`}>{p.name}</span></div></td>
+                  <td className="px-4 py-2.5"><span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300">{p.faculty}</span></td>
+                  <td className={`px-4 py-2.5 text-xs ${t.textSecondary}`}>{p.duration}</td>
+                  <td className="px-4 py-2.5"><div className="flex gap-1 opacity-0 group-hover:opacity-100"><button onClick={()=>{setProgForm({...p});setProgModal({mode:"edit",idx:i});}} className="p-1.5 rounded-lg text-sky-500 hover:bg-sky-500/10"><Pencil size={12}/></button><button onClick={()=>setProgConfirm(i)} className="p-1.5 rounded-lg text-red-500 hover:bg-red-500/10"><Trash2 size={12}/></button></div></td>
+                </tr>))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className={`${t.cardBg} rounded-2xl border ${t.cardBorder} shadow-sm overflow-hidden`}>
+          <div className={`flex items-center justify-between px-5 py-4 border-b ${t.divider}`}>
+            <div className="flex items-center gap-2.5"><div className="h-8 w-8 rounded-xl bg-sky-500/15 border border-sky-500/40 flex items-center justify-center"><Layers size={16} className="text-sky-500"/></div><div><p className={`font-bold text-sm ${t.textPrimary}`}>Batches</p><p className={`text-[10px] ${t.textMuted}`}>{batches.length} registered</p></div></div>
+            <button onClick={()=>setBatchModalOpen(true)} className="flex items-center gap-1 px-3 py-1.5 bg-[#5478FF] text-white rounded-xl text-xs font-bold hover:bg-[#4060ee] shadow-sm"><Plus size={12}/>Add</button>
+          </div>
+          <div className="p-4 space-y-2 max-h-72 overflow-y-auto">
+            {loadingAcademic?<p className={`text-center text-sm py-6 ${t.textMuted}`}>Loading batches...</p>
+            :batches.length===0?<p className={`text-center text-sm py-6 ${t.textMuted}`}>No batches created yet</p>
+            :batches.map((b)=>(<div key={b.batchId} className={`flex items-center justify-between px-4 py-3 ${t.innerBg} rounded-xl border ${t.innerBorder}`}><div><p className={`text-sm font-semibold ${t.textPrimary}`}>{b.batchName}</p><p className={`text-[11px] ${t.textSecondary}`}>{`${b.intakeMonth} ${b.intakeYear}`} · {getCampusName(b.campusId)}</p></div><span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">{b.status}</span></div>))}
+          </div>
+        </div>
+
+        <div className={`${t.cardBg} rounded-2xl border ${t.cardBorder} shadow-sm overflow-hidden`}>
+          <div className={`flex items-center justify-between px-5 py-4 border-b ${t.divider}`}>
+            <div className="flex items-center gap-2.5"><div className="h-8 w-8 rounded-xl bg-teal-500/15 border border-teal-500/40 flex items-center justify-center"><Clock size={16} className="text-teal-500"/></div><div><p className={`font-bold text-sm ${t.textPrimary}`}>Semesters</p><p className={`text-[10px] ${t.textMuted}`}>{semesters.length} registered</p></div></div>
+            <button onClick={()=>setSemesterModalOpen(true)} disabled={batches.length===0} className="flex items-center gap-1 px-3 py-1.5 bg-[#5478FF] text-white rounded-xl text-xs font-bold hover:bg-[#4060ee] shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"><Plus size={12}/>Add</button>
+          </div>
+          <div className="p-4 space-y-2 max-h-72 overflow-y-auto">
+            {loadingAcademic?<p className={`text-center text-sm py-6 ${t.textMuted}`}>Loading semesters...</p>
+            :semesters.length===0?<p className={`text-center text-sm py-6 ${t.textMuted}`}>No semesters created yet</p>
+            :semesters.map((s)=>(<div key={s.semesterId} className={`flex items-center justify-between px-4 py-3 ${t.innerBg} rounded-xl border ${t.innerBorder}`}><div><p className={`text-sm font-semibold ${t.textPrimary}`}>{`Year ${s.yearNumber} · Semester ${s.semesterNumber}`}</p><p className={`text-[11px] ${t.textSecondary}`}>{getBatchName(s.batchId)} · {s.startDate} to {s.endDate}</p></div><span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">{s.status}</span></div>))}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className={`${t.cardBg} rounded-2xl border ${t.cardBorder} shadow-sm overflow-hidden`}>
+          <div className={`flex items-center justify-between px-5 py-4 border-b ${t.divider}`}>
+            <div className="flex items-center gap-2.5">
+              <div className="h-8 w-8 rounded-xl bg-blue-500/15 border border-blue-500/40 flex items-center justify-center"><Building size={16} className="text-blue-500"/></div>
+              <div><p className={`font-bold text-sm ${t.textPrimary}`}>Campuses</p><p className={`text-[10px] ${t.textMuted}`}>Create and activate/deactivate</p></div>
+            </div>
+            <button onClick={()=>setCampusModalOpen(true)} className="flex items-center gap-1 px-3 py-1.5 bg-[#5478FF] text-white rounded-xl text-xs font-bold hover:bg-[#4060ee] shadow-sm"><Plus size={12}/>Add</button>
+          </div>
+          <div className="p-4 space-y-2 max-h-72 overflow-y-auto">
+            {campuses.length===0 ? <p className={`text-center text-sm py-6 ${t.textMuted}`}>No campuses found</p>
+              : campuses.map((c)=>(
+                <div key={c.campusId} className={`px-3 py-3 rounded-xl border ${t.innerBorder} ${t.innerBg} flex items-center justify-between gap-2`}>
+                  <div>
+                    <p className={`text-sm font-semibold ${t.textPrimary}`}>{c.campusName}</p>
+                    <p className={`text-[11px] ${t.textSecondary}`}>{c.location}</p>
+                  </div>
+                  <button
+                    onClick={()=>toggleCampusStatus(c)}
+                    disabled={savingAcademic}
+                    className={`text-[10px] font-bold px-2 py-1 rounded-full border ${String(c.status).toUpperCase()==="ACTIVE" ? "bg-emerald-100 text-emerald-800 border-emerald-300" : "bg-slate-100 text-slate-700 border-slate-300"}`}
+                  >
+                    {String(c.status).toUpperCase()==="ACTIVE" ? "Deactivate" : "Activate"}
+                  </button>
+                </div>
+              ))}
+          </div>
+        </div>
+
+        <div className={`${t.cardBg} rounded-2xl border ${t.cardBorder} shadow-sm overflow-hidden`}>
+          <div className={`flex items-center justify-between px-5 py-4 border-b ${t.divider}`}>
+            <div className="flex items-center gap-2.5">
+              <div className="h-8 w-8 rounded-xl bg-purple-500/15 border border-purple-500/40 flex items-center justify-center"><BookMarked size={16} className="text-purple-500"/></div>
+              <div><p className={`font-bold text-sm ${t.textPrimary}`}>Curriculums</p><p className={`text-[10px] ${t.textMuted}`}>Single record per name+program</p></div>
+            </div>
+            <button onClick={()=>setCurriculumModalOpen(true)} className="flex items-center gap-1 px-3 py-1.5 bg-[#5478FF] text-white rounded-xl text-xs font-bold hover:bg-[#4060ee] shadow-sm"><Plus size={12}/>Add</button>
+          </div>
+          <div className="p-4 space-y-2 max-h-72 overflow-y-auto">
+            {curriculums.length===0 ? <p className={`text-center text-sm py-6 ${t.textMuted}`}>No curriculums found</p>
+              : curriculums.map((c)=>(
+                <div key={c.curriculumId} className={`px-3 py-3 rounded-xl border ${t.innerBorder} ${t.innerBg}`}>
+                  <p className={`text-sm font-semibold ${t.textPrimary}`}>{c.curriculumName} <span className={t.textMuted}>v{c.version}</span></p>
+                  <p className={`text-[11px] ${t.textSecondary}`}>Program: {programCatalog.find(p=>String(p.programId)===String(c.programId))?.programName ?? `#${c.programId}`}</p>
+                </div>
+              ))}
+          </div>
+        </div>
+
+        <div className={`${t.cardBg} rounded-2xl border ${t.cardBorder} shadow-sm overflow-hidden`}>
+          <div className={`flex items-center justify-between px-5 py-4 border-b ${t.divider}`}>
+            <div className="flex items-center gap-2.5">
+              <div className="h-8 w-8 rounded-xl bg-amber-500/15 border border-amber-500/40 flex items-center justify-center"><FileText size={16} className="text-amber-500"/></div>
+              <div><p className={`font-bold text-sm ${t.textPrimary}`}>Subjects</p><p className={`text-[10px] ${t.textMuted}`}>Assign to semester structure</p></div>
+            </div>
+            <button onClick={()=>setSubjectModalOpen(true)} className="flex items-center gap-1 px-3 py-1.5 bg-[#5478FF] text-white rounded-xl text-xs font-bold hover:bg-[#4060ee] shadow-sm"><Plus size={12}/>Add</button>
+          </div>
+          <div className="px-4 pt-3">
+            <label className={`block text-[11px] font-semibold mb-1 ${t.textSecondary}`}>Semester Filter</label>
+            <select value={selectedSemesterId} onChange={e=>setSelectedSemesterId(e.target.value)} className={`w-full mb-3 p-2 border rounded-xl text-sm ${t.inputBg}`}>
+              <option value="">Select semester</option>
+              {semesters.map(s=><option key={s.semesterId} value={s.semesterId}>{`Y${s.yearNumber} S${s.semesterNumber} - ${getBatchName(s.batchId)}`}</option>)}
+            </select>
+          </div>
+          <div className="p-4 space-y-2 max-h-56 overflow-y-auto">
+            {semesterSubjects.length===0 ? <p className={`text-center text-sm py-6 ${t.textMuted}`}>No subjects for selected semester</p>
+              : semesterSubjects.map((s)=>(
+                <div key={s.subjectId} className={`px-3 py-2 rounded-xl border ${t.innerBorder} ${t.innerBg}`}>
+                  <p className={`text-sm font-semibold ${t.textPrimary}`}>{s.subjectCode} - {s.subjectName}</p>
+                  <p className={`text-[11px] ${t.textSecondary}`}>Credits: {s.credits}</p>
+                </div>
+              ))}
+          </div>
+        </div>
+      </div>
+
+      <ConfirmModal isDark={isDark} open={saveConfirm} onClose={()=>setSaveConfirm(false)} onConfirm={doSave} title="Save Changes?" message="Update campus details?" confirmLabel="Yes, Save"/>
+      <EntityModal open={!!facModal} onClose={()=>setFacModal(null)} title={facModal?.mode==="add"?"Add Faculty":"Edit Faculty"}><div className="mb-4"><label className={`block text-xs font-semibold mb-1.5 ${t.textSecondary}`}>Faculty Name *</label><input value={facForm} onChange={e=>setFacForm(e.target.value)} placeholder="e.g. Computing" className={`w-full p-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#5478FF]/40 ${t.inputBg}`}/></div><div className="flex justify-end gap-2"><button onClick={()=>setFacModal(null)} className={`px-4 py-2 rounded-xl border text-sm font-semibold ${t.cardBorder} ${t.textSecondary} hover:opacity-80`}>Cancel</button><button onClick={saveFaculty} className="px-4 py-2 rounded-xl bg-[#5478FF] text-white text-sm font-semibold hover:bg-[#4060ee]">Save</button></div></EntityModal>
+      <EntityModal open={!!progModal} onClose={()=>setProgModal(null)} title={progModal?.mode==="add"?"Add Program":"Edit Program"}><div className="mb-3"><label className={`block text-xs font-semibold mb-1.5 ${t.textSecondary}`}>Program Name *</label><input name="name" value={progForm.name} onChange={hp} placeholder="e.g. Software Engineering" className={`w-full p-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#5478FF]/40 ${t.inputBg}`}/></div><div className="mb-3"><label className={`block text-xs font-semibold mb-1.5 ${t.textSecondary}`}>Faculty *</label><select name="faculty" value={progForm.faculty} onChange={hp} className={`w-full p-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#5478FF]/40 ${t.inputBg}`}>{faculties.map(f=><option key={f} value={f}>{f}</option>)}</select></div><div className="mb-4"><label className={`block text-xs font-semibold mb-1.5 ${t.textSecondary}`}>Duration</label><select name="duration" value={progForm.duration} onChange={hp} className={`w-full p-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#5478FF]/40 ${t.inputBg}`}>{["1 yr","2 yrs","3 yrs","4 yrs","5 yrs"].map(d=><option key={d} value={d}>{d}</option>)}</select></div><div className="flex justify-end gap-2"><button onClick={()=>setProgModal(null)} className={`px-4 py-2 rounded-xl border text-sm font-semibold ${t.cardBorder} ${t.textSecondary} hover:opacity-80`}>Cancel</button><button onClick={saveProgram} className="px-4 py-2 rounded-xl bg-[#5478FF] text-white text-sm font-semibold hover:bg-[#4060ee]">Save</button></div></EntityModal>
+      <EntityModal open={campusModalOpen} onClose={()=>setCampusModalOpen(false)} title="Create Campus"><div className="mb-3"><label className={`block text-xs font-semibold mb-1.5 ${t.textSecondary}`}>Campus Name *</label><input value={campusForm.campusName} onChange={e=>setCampusForm(p=>({...p,campusName:e.target.value}))} className={`w-full p-2.5 border rounded-xl text-sm ${t.inputBg}`}/></div><div className="mb-3"><label className={`block text-xs font-semibold mb-1.5 ${t.textSecondary}`}>Location *</label><input value={campusForm.location} onChange={e=>setCampusForm(p=>({...p,location:e.target.value}))} className={`w-full p-2.5 border rounded-xl text-sm ${t.inputBg}`}/></div><div className="mb-4"><label className={`block text-xs font-semibold mb-1.5 ${t.textSecondary}`}>Status *</label><select value={campusForm.status} onChange={e=>setCampusForm(p=>({...p,status:e.target.value}))} className={`w-full p-2.5 border rounded-xl text-sm ${t.inputBg}`}>{["ACTIVE","INACTIVE"].map(s=><option key={s} value={s}>{s}</option>)}</select></div><div className="flex justify-end gap-2"><button onClick={()=>setCampusModalOpen(false)} className={`px-4 py-2 rounded-xl border text-sm font-semibold ${t.cardBorder} ${t.textSecondary}`}>Cancel</button><button onClick={saveCampus} disabled={savingAcademic} className="px-4 py-2 rounded-xl bg-[#5478FF] text-white text-sm font-semibold disabled:opacity-60">Save</button></div></EntityModal>
+      <EntityModal open={curriculumModalOpen} onClose={()=>setCurriculumModalOpen(false)} title="Create Curriculum"><div className="mb-3"><label className={`block text-xs font-semibold mb-1.5 ${t.textSecondary}`}>Curriculum Name *</label><input value={curriculumForm.curriculumName} onChange={e=>setCurriculumForm(p=>({...p,curriculumName:e.target.value}))} className={`w-full p-2.5 border rounded-xl text-sm ${t.inputBg}`}/></div><div className="grid grid-cols-2 gap-3 mb-3"><div><label className={`block text-xs font-semibold mb-1.5 ${t.textSecondary}`}>Version</label><input value={curriculumForm.version} onChange={e=>setCurriculumForm(p=>({...p,version:e.target.value}))} className={`w-full p-2.5 border rounded-xl text-sm ${t.inputBg}`}/></div><div><label className={`block text-xs font-semibold mb-1.5 ${t.textSecondary}`}>Created Year</label><input type="number" value={curriculumForm.createdYear} onChange={e=>setCurriculumForm(p=>({...p,createdYear:e.target.value}))} className={`w-full p-2.5 border rounded-xl text-sm ${t.inputBg}`}/></div></div><div className="mb-3"><label className={`block text-xs font-semibold mb-1.5 ${t.textSecondary}`}>Program *</label><select value={curriculumForm.programId} onChange={e=>setCurriculumForm(p=>({...p,programId:e.target.value}))} className={`w-full p-2.5 border rounded-xl text-sm ${t.inputBg}`}>{programCatalog.map(p=><option key={p.programId} value={p.programId}>{p.programName}</option>)}</select></div><div className="mb-4"><label className={`block text-xs font-semibold mb-1.5 ${t.textSecondary}`}>Status</label><select value={curriculumForm.status} onChange={e=>setCurriculumForm(p=>({...p,status:e.target.value}))} className={`w-full p-2.5 border rounded-xl text-sm ${t.inputBg}`}>{["ACTIVE","INACTIVE"].map(s=><option key={s} value={s}>{s}</option>)}</select></div><div className="flex justify-end gap-2"><button onClick={()=>setCurriculumModalOpen(false)} className={`px-4 py-2 rounded-xl border text-sm font-semibold ${t.cardBorder} ${t.textSecondary}`}>Cancel</button><button onClick={saveCurriculum} disabled={savingAcademic} className="px-4 py-2 rounded-xl bg-[#5478FF] text-white text-sm font-semibold disabled:opacity-60">Save</button></div></EntityModal>
+      <EntityModal open={subjectModalOpen} onClose={()=>setSubjectModalOpen(false)} title="Create Subject"><div className="grid grid-cols-2 gap-3 mb-3"><div><label className={`block text-xs font-semibold mb-1.5 ${t.textSecondary}`}>Subject Code *</label><input value={subjectForm.subjectCode} onChange={e=>setSubjectForm(p=>({...p,subjectCode:e.target.value}))} className={`w-full p-2.5 border rounded-xl text-sm ${t.inputBg}`}/></div><div><label className={`block text-xs font-semibold mb-1.5 ${t.textSecondary}`}>Credits *</label><input type="number" min="0" value={subjectForm.credits} onChange={e=>setSubjectForm(p=>({...p,credits:e.target.value}))} className={`w-full p-2.5 border rounded-xl text-sm ${t.inputBg}`}/></div></div><div className="mb-3"><label className={`block text-xs font-semibold mb-1.5 ${t.textSecondary}`}>Subject Name *</label><input value={subjectForm.subjectName} onChange={e=>setSubjectForm(p=>({...p,subjectName:e.target.value}))} className={`w-full p-2.5 border rounded-xl text-sm ${t.inputBg}`}/></div><div className="mb-3"><label className={`block text-xs font-semibold mb-1.5 ${t.textSecondary}`}>Curriculum *</label><select value={subjectForm.curriculumId} onChange={e=>setSubjectForm(p=>({...p,curriculumId:e.target.value}))} className={`w-full p-2.5 border rounded-xl text-sm ${t.inputBg}`}>{curriculums.map(c=><option key={c.curriculumId} value={c.curriculumId}>{c.curriculumName} (v{c.version})</option>)}</select></div><div className="mb-4"><label className={`block text-xs font-semibold mb-1.5 ${t.textSecondary}`}>Semester *</label><select value={subjectForm.semesterId} onChange={e=>setSubjectForm(p=>({...p,semesterId:e.target.value}))} className={`w-full p-2.5 border rounded-xl text-sm ${t.inputBg}`}>{semesters.map(s=><option key={s.semesterId} value={s.semesterId}>{`Y${s.yearNumber} S${s.semesterNumber} - ${getBatchName(s.batchId)}`}</option>)}</select></div><div className="flex justify-end gap-2"><button onClick={()=>setSubjectModalOpen(false)} className={`px-4 py-2 rounded-xl border text-sm font-semibold ${t.cardBorder} ${t.textSecondary}`}>Cancel</button><button onClick={saveSubject} disabled={savingAcademic} className="px-4 py-2 rounded-xl bg-[#5478FF] text-white text-sm font-semibold disabled:opacity-60">Save</button></div></EntityModal>
+      <EntityModal open={batchModalOpen} onClose={()=>setBatchModalOpen(false)} title="Add Batch"><div className="mb-3"><label className={`block text-xs font-semibold mb-1.5 ${t.textSecondary}`}>Batch Name *</label><input value={batchForm.batchName} onChange={e=>setBatchForm(p=>({...p,batchName:e.target.value}))} placeholder="e.g. IT2026" className={`w-full p-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#5478FF]/40 ${t.inputBg}`}/></div><div className="grid grid-cols-2 gap-3 mb-3"><div><label className={`block text-xs font-semibold mb-1.5 ${t.textSecondary}`}>Intake Year *</label><input type="number" min="2000" max="2500" value={batchForm.intakeYear} onChange={e=>setBatchForm(p=>({...p,intakeYear:e.target.value}))} className={`w-full p-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#5478FF]/40 ${t.inputBg}`}/></div><div><label className={`block text-xs font-semibold mb-1.5 ${t.textSecondary}`}>Intake Month *</label><select value={batchForm.intakeMonth} onChange={e=>setBatchForm(p=>({...p,intakeMonth:e.target.value}))} className={`w-full p-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#5478FF]/40 ${t.inputBg}`}>{MONTHS.map(m=><option key={m} value={m}>{m}</option>)}</select></div></div><div className="grid grid-cols-2 gap-3 mb-3"><div><label className={`block text-xs font-semibold mb-1.5 ${t.textSecondary}`}>Campus *</label><select value={batchForm.campusId} onChange={e=>setBatchForm(p=>({...p,campusId:e.target.value}))} className={`w-full p-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#5478FF]/40 ${t.inputBg}`}>{campuses.map(c=><option key={c.campusId} value={c.campusId}>{c.campusName}</option>)}</select></div><div><label className={`block text-xs font-semibold mb-1.5 ${t.textSecondary}`}>Status *</label><select value={batchForm.status} onChange={e=>setBatchForm(p=>({...p,status:e.target.value}))} className={`w-full p-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#5478FF]/40 ${t.inputBg}`}>{["ACTIVE","INACTIVE"].map(s=><option key={s} value={s}>{s}</option>)}</select></div></div><div className="mb-4"><label className={`block text-xs font-semibold mb-1.5 ${t.textSecondary}`}>Curriculum *</label><select value={batchForm.curriculumId} onChange={e=>setBatchForm(p=>({...p,curriculumId:e.target.value}))} className={`w-full p-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#5478FF]/40 ${t.inputBg}`}>{curriculums.map(c=><option key={c.curriculumId} value={c.curriculumId}>{c.curriculumName} ({c.version})</option>)}</select></div><div className="flex justify-end gap-2"><button onClick={()=>setBatchModalOpen(false)} className={`px-4 py-2 rounded-xl border text-sm font-semibold ${t.cardBorder} ${t.textSecondary} hover:opacity-80`}>Cancel</button><button onClick={saveBatch} disabled={savingAcademic} className="px-4 py-2 rounded-xl bg-[#5478FF] text-white text-sm font-semibold hover:bg-[#4060ee] disabled:opacity-60">Save</button></div></EntityModal>
+      <EntityModal open={semesterModalOpen} onClose={()=>setSemesterModalOpen(false)} title="Add Semester"><div className="grid grid-cols-2 gap-3 mb-3"><div><label className={`block text-xs font-semibold mb-1.5 ${t.textSecondary}`}>Year Number *</label><input type="number" min="1" value={semesterForm.yearNumber} onChange={e=>setSemesterForm(p=>({...p,yearNumber:e.target.value}))} className={`w-full p-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#5478FF]/40 ${t.inputBg}`}/></div><div><label className={`block text-xs font-semibold mb-1.5 ${t.textSecondary}`}>Semester Number *</label><input type="number" min="1" value={semesterForm.semesterNumber} onChange={e=>setSemesterForm(p=>({...p,semesterNumber:e.target.value}))} className={`w-full p-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#5478FF]/40 ${t.inputBg}`}/></div></div><div className="mb-3"><label className={`block text-xs font-semibold mb-1.5 ${t.textSecondary}`}>Batch *</label><select value={semesterForm.batchId} onChange={e=>setSemesterForm(p=>({...p,batchId:e.target.value}))} className={`w-full p-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#5478FF]/40 ${t.inputBg}`}>{batches.map(b=><option key={b.batchId} value={b.batchId}>{b.batchName}</option>)}</select></div><div className="grid grid-cols-2 gap-3 mb-3"><div><label className={`block text-xs font-semibold mb-1.5 ${t.textSecondary}`}>Start Date *</label><input type="date" min={todayISO} value={semesterForm.startDate} onChange={e=>setSemesterForm(p=>{const newStartDate=e.target.value;return({...p,startDate:newStartDate,endDate:p.endDate && p.endDate<newStartDate?"":p.endDate});})} className={`w-full p-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#5478FF]/40 ${t.inputBg}`}/></div><div><label className={`block text-xs font-semibold mb-1.5 ${t.textSecondary}`}>End Date *</label><input type="date" min={semesterForm.startDate||todayISO} value={semesterForm.endDate} onChange={e=>setSemesterForm(p=>({...p,endDate:e.target.value}))} className={`w-full p-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#5478FF]/40 ${t.inputBg}`}/></div></div><div className="mb-4"><label className={`block text-xs font-semibold mb-1.5 ${t.textSecondary}`}>Status *</label><select value={semesterForm.status} onChange={e=>setSemesterForm(p=>({...p,status:e.target.value}))} className={`w-full p-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#5478FF]/40 ${t.inputBg}`}>{["ACTIVE","INACTIVE"].map(s=><option key={s} value={s}>{s}</option>)}</select></div><div className="flex justify-end gap-2"><button onClick={()=>setSemesterModalOpen(false)} className={`px-4 py-2 rounded-xl border text-sm font-semibold ${t.cardBorder} ${t.textSecondary} hover:opacity-80`}>Cancel</button><button onClick={saveSemester} disabled={savingAcademic} className="px-4 py-2 rounded-xl bg-[#5478FF] text-white text-sm font-semibold hover:bg-[#4060ee] disabled:opacity-60">Save</button></div></EntityModal>
+      <ConfirmModal isDark={isDark} open={facConfirm!==null} onClose={()=>setFacConfirm(null)} onConfirm={()=>deleteFaculty(facConfirm)} title="Delete Faculty" message={`Delete "${faculties[facConfirm]}"?`} confirmLabel="Yes, Delete" variant="danger"/>
+      <ConfirmModal isDark={isDark} open={progConfirm!==null} onClose={()=>setProgConfirm(null)} onConfirm={()=>deleteProgram(progConfirm)} title="Delete Program" message={`Delete "${programs[progConfirm]?.name}"?`} confirmLabel="Yes, Delete" variant="danger"/>
+    </div>
+  );
+};
 
 // ═══════════════════════════════════════════════════════════════════
 // SECTION: NOTIFICATIONS
@@ -475,6 +1097,194 @@ const SectionReports = ({ isDark }) => {
           <button onClick={()=>handleAll("PDF")} disabled={!!generating} className="px-4 py-2 rounded-xl bg-red-600 text-white text-xs font-bold hover:bg-red-700 flex items-center gap-1.5 disabled:opacity-40">{generating==="all-PDF"?<Loader2 size={12} className="animate-spin"/>:<FileText size={12}/>}All PDF</button>
           <button onClick={()=>handleAll("CSV")} disabled={!!generating} className="px-4 py-2 rounded-xl bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 flex items-center gap-1.5 disabled:opacity-40">{generating==="all-CSV"?<Loader2 size={12} className="animate-spin"/>:<Download size={12}/>}All CSV</button>
         </div>
+      </div>
+    </div>
+  );
+};
+
+// ═══════════════════════════════════════════════════════════════════
+// SECTION: FEEDBACK ANALYTICS
+// ═══════════════════════════════════════════════════════════════════
+const SectionFeedback = ({ isDark }) => {
+  const t=T(isDark);
+  const[feedbacks,setFeedbacks]=useState([]);
+  const[loading,setLoading]=useState(true);
+  const[error,setError]=useState("");
+  const[typeFilter,setTypeFilter]=useState("ALL");
+  const[statusFilter,setStatusFilter]=useState("ALL");
+  const[search,setSearch]=useState("");
+
+  useEffect(() => {
+    let active = true;
+    const loadFeedbacks = async () => {
+      setLoading(true);
+      setError("");
+      try {
+        const response = await getAllFeedbacks();
+        if (!active) return;
+        setFeedbacks(Array.isArray(response?.data) ? response.data : []);
+      } catch (err) {
+        if (!active) return;
+        setFeedbacks([]);
+        setError(err?.response?.data?.message || "Failed to load feedback analytics.");
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+    loadFeedbacks();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const filtered = feedbacks.filter((item) => {
+    const feedbackType = (item.feedbackType || "").toUpperCase();
+    const status = (item.status || "").toUpperCase();
+    const matchesType = typeFilter === "ALL" || feedbackType === typeFilter;
+    const matchesStatus = statusFilter === "ALL" || status === statusFilter;
+    const q = search.trim().toLowerCase();
+    const matchesSearch =
+      !q ||
+      (item.message || "").toLowerCase().includes(q) ||
+      String(item.userId || "").includes(q) ||
+      String(item.sessionId || "").includes(q);
+    return matchesType && matchesStatus && matchesSearch;
+  });
+
+  const total = feedbacks.length;
+  const avgRating = total
+    ? (feedbacks.reduce((sum, item) => sum + Number(item.rating || 0), 0) / total).toFixed(1)
+    : "0.0";
+  const positiveCount = feedbacks.filter((item) => (item.feedbackType || "").toUpperCase() === "POSITIVE").length;
+  const negativeCount = feedbacks.filter((item) => (item.feedbackType || "").toUpperCase() === "NEGATIVE").length;
+  const ratingBreakdown = [5,4,3,2,1].map((rating) => ({
+    rating,
+    count: feedbacks.filter((item) => Number(item.rating) === rating).length,
+  }));
+
+  const sorted = [...filtered].sort((a, b) => {
+    const left = a?.createdAt ? new Date(a.createdAt).getTime() : 0;
+    const right = b?.createdAt ? new Date(b.createdAt).getTime() : 0;
+    return right - left;
+  });
+
+  return (
+    <div className={`min-h-full ${t.pageBg} p-6 space-y-6`}>
+      <div>
+        <h2 className={`text-base font-black flex items-center gap-2 ${t.textPrimary}`}>
+          <MessageSquare size={18} className="text-[#5478FF]"/>Feedback Analytics
+        </h2>
+        <p className={`text-xs mt-0.5 ${t.textSecondary}`}>
+          Review student ratings and comments across study sessions
+        </p>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <StatCard label="Total" value={total} icon={MessageSquare} colorKey="blue" isDark={isDark}/>
+        <StatCard label="Avg Rating" value={avgRating} icon={Star} colorKey="amber" isDark={isDark}/>
+        <StatCard label="Positive" value={positiveCount} icon={CheckCircle} colorKey="green" isDark={isDark}/>
+        <StatCard label="Negative" value={negativeCount} icon={AlertCircle} colorKey="red" isDark={isDark}/>
+      </div>
+
+      <div className={`${t.cardBg} rounded-2xl border ${t.cardBorder} p-4 space-y-3`}>
+        <div className="flex flex-wrap gap-2 items-center">
+          <ThemedSearch isDark={isDark} value={search} onChange={setSearch} placeholder="Search message, user ID, session ID..."/>
+          <ThemedSelect isDark={isDark} value={typeFilter} onChange={setTypeFilter} options={["ALL","POSITIVE","NEGATIVE"]} placeholder="Type"/>
+          <ThemedSelect isDark={isDark} value={statusFilter} onChange={setStatusFilter} options={["ALL","PENDING","REVIEWED"]} placeholder="Status"/>
+          <span className={`text-xs ml-auto ${t.textMuted}`}>
+            Showing <span className={`font-bold ${t.textSecondary}`}>{sorted.length}</span> of {feedbacks.length}
+          </span>
+        </div>
+
+        <div className="grid sm:grid-cols-5 gap-2">
+          {ratingBreakdown.map((row) => {
+            const pct = total ? Math.round((row.count / total) * 100) : 0;
+            return (
+              <div key={row.rating} className={`${t.innerBg} border ${t.innerBorder} rounded-xl p-3`}>
+                <div className="flex items-center justify-between mb-1">
+                  <span className={`text-xs font-bold ${t.textPrimary}`}>{row.rating} Star</span>
+                  <span className={`text-[10px] ${t.textMuted}`}>{row.count}</span>
+                </div>
+                <div className={`h-1.5 rounded-full ${isDark ? "bg-[#0B1230]" : "bg-slate-100"}`}>
+                  <div
+                    className="h-1.5 rounded-full bg-[#5478FF]"
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {loading ? (
+          <div className={`${t.cardBg} rounded-2xl border ${t.cardBorder} p-10 text-center`}>
+            <Loader2 size={18} className={`mx-auto mb-2 animate-spin ${t.textMuted}`}/>
+            <p className={`text-xs ${t.textMuted}`}>Loading feedback data...</p>
+          </div>
+        ) : error ? (
+          <div className={`${t.cardBg} rounded-2xl border border-red-500/40 bg-red-500/10 p-4`}>
+            <p className="text-xs text-red-400 font-semibold">{error}</p>
+          </div>
+        ) : (
+          <div className={`${t.cardBg} rounded-2xl border ${t.cardBorder} shadow-sm overflow-hidden`}>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className={`${t.tableHead} text-xs uppercase tracking-wider border-b ${t.divider}`}>
+                    {[
+                      "#",
+                      "Rating",
+                      "Type",
+                      "Status",
+                      "Message",
+                      "User",
+                      "Session",
+                      "Created",
+                    ].map((h) => (
+                      <th key={h} className="px-4 py-3 text-left font-semibold">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {sorted.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className={`py-12 text-center text-sm ${t.textMuted}`}>
+                        No feedback records match your filters
+                      </td>
+                    </tr>
+                  ) : (
+                    sorted.map((item, index) => (
+                      <tr key={item.feedbackId || index} className={`border-t ${t.divider} ${index % 2 === 1 ? t.rowAlt : ""} ${t.rowHover} transition-colors`}>
+                        <td className={`px-4 py-3 text-xs font-mono ${t.textMuted}`}>#{item.feedbackId}</td>
+                        <td className="px-4 py-3">
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-500">
+                            <Star size={11} fill="currentColor"/>{item.rating ?? 0}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${(item.feedbackType || "").toUpperCase() === "POSITIVE" ? "bg-emerald-100 text-emerald-700 border-emerald-300" : "bg-red-100 text-red-700 border-red-300"}`}>
+                            {(item.feedbackType || "UNKNOWN").toUpperCase()}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${(item.status || "").toUpperCase() === "REVIEWED" ? "bg-blue-100 text-blue-700 border-blue-300" : "bg-amber-100 text-amber-700 border-amber-300"}`}>
+                            {(item.status || "PENDING").toUpperCase()}
+                          </span>
+                        </td>
+                        <td className={`px-4 py-3 text-xs max-w-[360px] ${t.textSecondary}`}>{item.message || "-"}</td>
+                        <td className={`px-4 py-3 text-xs ${t.textPrimary}`}>#{item.userId}</td>
+                        <td className={`px-4 py-3 text-xs ${t.textPrimary}`}>#{item.sessionId}</td>
+                        <td className={`px-4 py-3 text-xs ${t.textMuted}`}>
+                          {item.createdAt ? new Date(item.createdAt).toLocaleString() : "-"}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -710,10 +1520,10 @@ const AdminDetailsPanel = ({ user, onClose, isDark }) => {
         <div className="h-16 bg-gradient-to-r from-[#111FA2] via-[#5478FF] to-[#A78BFA]"/>
         <div className="px-4 pb-4">
           <div className="-mt-8 mb-3"><div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-[#5478FF] to-[#A78BFA] flex items-center justify-center text-white font-black text-xl border-4 border-[#111B3D] shadow-lg">{(user?.firstName??"S").charAt(0)}{(user?.lastName??"A").charAt(0)}</div></div>
-          <p className={`font-black text-base ${t.textPrimary}`}>{user?.firstName?`${user.firstName} ${user.lastName??""}`:user.username.toUpperCase()}</p>
-          <p className="text-sky-500 text-xs font-semibold">{user.username=="admin"? "System Administrator": user.username=='batch_rep'? 'Batch Reprasantative':'Student'}</p>
+          <p className={`font-black text-base ${t.textPrimary}`}>{user?.firstName?`${user.firstName} ${user.lastName??""}`:"Super Admin"}</p>
+          <p className="text-sky-500 text-xs font-semibold">System Administrator</p>
           <div className="mt-3 space-y-2">
-            {[{icon:Mail,label:"Email",val:user.email},{icon:Shield,label:"Role",val:user.role}].map(f=>(
+            {[{icon:Mail,label:"Email",val:user?.email??"superadmin@sliit.lk"},{icon:Shield,label:"Role",val:"Admin"},{icon:Building2,label:"Department",val:"ICT"}].map(f=>(
               <div key={f.label} className="flex items-center gap-2.5 py-1.5">
                 <div className={`h-6 w-6 rounded-lg bg-sky-500/15 flex items-center justify-center shrink-0`}><f.icon size={12} className="text-sky-500"/></div>
                 <div><p className={`text-[9px] font-bold uppercase tracking-wider leading-none ${t.textMuted}`}>{f.label}</p><p className={`text-xs font-semibold ${t.textPrimary}`}>{f.val}</p></div>
@@ -724,6 +1534,94 @@ const AdminDetailsPanel = ({ user, onClose, isDark }) => {
         </div>
       </div>
     </>
+  );
+};
+
+const SectionDashboard = ({ isDark, onNavigate }) => {
+  const t = T(isDark);
+
+  const totalUsers = SEED_USERS.length;
+  const activeUsers = SEED_USERS.filter(u => u.active).length;
+  const batchReps = SEED_REPS.filter(r => r.active).length;
+  const pendingRequests = SEED_REQUESTS.filter(r => r.status === "PENDING").length;
+  const criticalLogs = SEED_LOGS.filter(l => l.severity === "danger").length;
+
+  const activity = [...SEED_LOGS].slice(0, 5);
+
+  const quickLinks = [
+    { id: "users", label: "Manage Users", icon: Users },
+    { id: "batchreps", label: "Batch Reps", icon: UserCheck },
+    { id: "requests", label: "Review Requests", icon: ClipboardList },
+    { id: "notifications", label: "Send Notifications", icon: Bell },
+  ];
+
+  return (
+    <div className={`min-h-full ${t.pageBg} p-6 space-y-6`}>
+      <div className={`${t.cardBg} rounded-2xl border ${t.cardBorder} shadow-sm p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4`}>
+        <div>
+          <h2 className={`text-lg font-black ${t.textPrimary}`}>Campus Snapshot</h2>
+          <p className={`text-xs mt-1 ${t.textSecondary}`}>
+            Welcome back. Here is the current admin overview for CampusConnect.
+          </p>
+        </div>
+        <div className={`text-xs px-3 py-2 rounded-xl border ${t.innerBorder} ${t.innerBg} ${t.textSecondary}`}>
+          Updated {new Date().toLocaleString()}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
+        <StatCard label="Total Users" value={totalUsers} icon={Users2} colorKey="blue" isDark={isDark}/>
+        <StatCard label="Active Users" value={activeUsers} icon={CheckCircle} colorKey="green" isDark={isDark}/>
+        <StatCard label="Batch Reps" value={batchReps} icon={UserCheck} colorKey="purple" isDark={isDark}/>
+        <StatCard label="Pending Requests" value={pendingRequests} icon={Clock} colorKey="amber" isDark={isDark}/>
+        <StatCard label="Critical Alerts" value={criticalLogs} icon={AlertCircle} colorKey="red" isDark={isDark}/>
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+        <div className={`xl:col-span-2 ${t.cardBg} rounded-2xl border ${t.cardBorder} shadow-sm overflow-hidden`}>
+          <div className={`px-5 py-4 border-b ${t.divider} flex items-center justify-between`}>
+            <h3 className={`text-sm font-black ${t.textPrimary}`}>Recent Activity</h3>
+            <button
+              onClick={() => onNavigate("logs")}
+              className="text-xs font-semibold text-sky-500 hover:text-sky-400 transition-colors"
+            >
+              View All Logs
+            </button>
+          </div>
+          <div className="divide-y divide-transparent">
+            {activity.map((log, idx) => (
+              <div key={log.id} className={`px-5 py-3 border-t ${idx === 0 ? "border-t-0" : t.divider} flex items-start justify-between gap-3`}>
+                <div>
+                  <p className={`text-sm font-semibold ${t.textPrimary}`}>{log.action}</p>
+                  <p className={`text-xs ${t.textSecondary}`}>{log.category} by {log.admin}</p>
+                </div>
+                <span className={`text-[10px] font-mono ${t.textMuted}`}>{log.time}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className={`${t.cardBg} rounded-2xl border ${t.cardBorder} shadow-sm p-5`}>
+          <h3 className={`text-sm font-black ${t.textPrimary}`}>Quick Actions</h3>
+          <p className={`text-xs mt-1 mb-4 ${t.textSecondary}`}>Jump to frequently used admin tasks.</p>
+          <div className="space-y-2">
+            {quickLinks.map(link => (
+              <button
+                key={link.id}
+                onClick={() => onNavigate(link.id)}
+                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl border transition-colors ${t.innerBorder} ${t.innerBg} ${t.textSecondary} hover:text-white hover:bg-[#1C2C5A]`}
+              >
+                <span className="flex items-center gap-2 text-xs font-semibold">
+                  <link.icon size={14}/>
+                  {link.label}
+                </span>
+                <ChevronRight size={14}/>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
 
@@ -742,21 +1640,21 @@ export default function Admin() {
   const notify=useCallback((type,message)=>setNotification({show:true,type,message}),[]);
   const t=T(isDark);
 
-  const handleLogout=()=>{setLogoutConfirm(false);setLogoutSuccessToast(true);setTimeout(()=>{logout?.();navigate("/campusconnect/login",{replace:true});},2000);};
+  const handleLogout=()=>{setLogoutConfirm(false);setLogoutSuccessToast(true);setTimeout(()=>{logout?.();navigate("/campusconnect/admin",{replace:true});},2000);};
 
   const renderContent=()=>{switch(active){
-    case "dashboard":     return <AnalyticsDashboard/>
+    case "dashboard":     return <SectionDashboard isDark={isDark} onNavigate={setActive}/>;
     case "users":         return <SectionUsers         notify={notify} isDark={isDark}/>;
     case "batchreps":     return <SectionBatchReps     notify={notify} isDark={isDark}/>;
     case "requests":      return <SectionRequests      notify={notify} isDark={isDark}/>;
     case "entities":      return <SectionEntities      notify={notify} isDark={isDark}/>;
     case "notifications": return <SectionNotifications notify={notify} isDark={isDark}/>;
     case "reports":       return <SectionReports       isDark={isDark}/>;
-    case "feedback":      return <SectionFeedbacks      isDark={isDark}/>;
+    case "feedback":      return <SectionFeedback      isDark={isDark}/>;
+    case "settings":      return <SectionSettings      isDark={isDark}/>;
     case "logs":          return <SectionLogs          isDark={isDark}/>;
     default:              return <div className={`text-center py-20 italic ${t.textMuted}`}>Section "{active}" coming soon…</div>;
   }};
-  //<div className={`h-[60vh] flex flex-col items-center justify-center gap-3 ${t.textMuted}`}><LayoutDashboard size={56}/><p className="font-bold text-base">Dashboard is empty</p></div>;
 
   return (
     <div className={`flex h-screen overflow-hidden ${t.pageBg}`}>
@@ -780,8 +1678,8 @@ export default function Admin() {
             {notification.show&&<NotificationBanner show={notification.show} type={notification.type} message={notification.message} onClose={()=>setNotification({show:false,type:"info",message:""})}/>}
             <button onClick={()=>setShowAdminPanel(p=>!p)} className={`flex items-center gap-3 px-3 py-1.5 rounded-xl transition-colors ${isDark?"hover:bg-white/5":"hover:bg-gray-100"}`}>
               <div className="text-right hidden sm:block">
-                <p className={`text-xs font-bold leading-tight ${t.textPrimary}`}>{user?.firstName?`${user.firstName} ${user.lastName??""}`:user.username.toUpperCase()}</p>
-                <p className="text-sky-500 text-[10px] font-medium">{user.username=="admin"? "System Administrator": user.username=='batch_rep'? 'Batch Reprasantative':'Student'}</p>
+                <p className={`text-xs font-bold leading-tight ${t.textPrimary}`}>{user?.firstName?`${user.firstName} ${user.lastName??""}`:"Super Admin"}</p>
+                <p className="text-sky-500 text-[10px] font-medium">System Administrator</p>
               </div>
               <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-[#5478FF] to-[#A78BFA] border-2 border-[#5478FF]/50 flex items-center justify-center text-white text-xs font-black">
                 {(user?.firstName??"S").charAt(0)}{(user?.lastName??"A").charAt(0)}

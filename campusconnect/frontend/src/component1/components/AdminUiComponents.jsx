@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Search, ChevronDown, X, CheckCircle, XCircle, Info, AlertTriangle } from "lucide-react";
+import { Search, ChevronDown, X } from "lucide-react";
 
 export const T = (isDark) => ({
   pageBg:      isDark ? "bg-[#070C24]"         : "bg-slate-100",
@@ -260,44 +260,5 @@ export const StatusBadge = ({ status }) => {
     <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full border ${map[status]??"bg-slate-100 text-slate-500 border-slate-300"}`}>
       <span className={`h-1.5 w-1.5 rounded-full ${dot[status]??"bg-slate-400"}`}/>{status}
     </span>
-  );
-};
-
-export const ConfirmModal = ({ open, onClose, onConfirm, title, message, confirmLabel="Confirm", variant="primary", isDark }) => {
-  if(!open)return null;
-  const t = T(isDark);
-  const btnCls = variant==="danger"?"bg-red-500 hover:bg-red-600 text-white":variant==="success"?"bg-emerald-500 hover:bg-emerald-600 text-white":"bg-[#5478FF] hover:bg-[#4060ee] text-white";
-  return (
-    <>
-      <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm"/>
-      <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-        <div className={`w-full max-w-sm ${t.confirmBg} rounded-2xl shadow-2xl border ${t.cardBorder} overflow-hidden`}>
-          <div className="px-6 pt-6 pb-4">
-            <div className={`h-12 w-12 rounded-full flex items-center justify-center mx-auto mb-3 ${variant==="danger"?"bg-red-100":"bg-blue-100"}`}>
-              {variant==="danger"?<AlertTriangle size={22} className="text-red-600"/>:<Info size={22} className="text-blue-600"/>}
-            </div>
-            <h3 className={`font-bold text-base text-center ${t.textPrimary}`}>{title}</h3>
-            <p className={`text-sm text-center mt-1 ${t.textSecondary}`}>{message}</p>
-          </div>
-          <div className="px-6 pb-6 flex gap-3">
-            <button onClick={onClose} className={`flex-1 px-4 py-2.5 rounded-xl border text-sm font-semibold ${t.cardBorder} ${t.textSecondary} hover:opacity-80`}>Cancel</button>
-            <button onClick={onConfirm} className={`flex-1 px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${btnCls}`}>{confirmLabel}</button>
-          </div>
-        </div>
-      </div>
-    </>
-  );
-};
-
-export const ToastPopup = ({ show, message, type="success", onClose }) => {
-  useEffect(()=>{ if(show){ const t=setTimeout(onClose,3500); return()=>clearTimeout(t); } },[show,onClose]);
-  if(!show)return null;
-  const styles = { success:"bg-emerald-600",error:"bg-red-600",info:"bg-[#5478FF]",warning:"bg-amber-500" };
-  const icons  = { success:<CheckCircle size={16}/>,error:<XCircle size={16}/>,info:<Info size={16}/>,warning:<AlertTriangle size={16}/> };
-  return (
-    <div className={`fixed top-5 right-5 z-[70] flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl text-white ${styles[type]}`}>
-      {icons[type]}<span className="text-sm font-semibold">{message}</span>
-      <button onClick={onClose} className="ml-2 opacity-70 hover:opacity-100"><X size={14}/></button>
-    </div>
   );
 };
