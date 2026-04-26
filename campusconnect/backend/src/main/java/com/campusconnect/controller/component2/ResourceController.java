@@ -22,14 +22,14 @@ public class ResourceController {
 
     @PutMapping("/update")
     public ResourceDtos.Response update(
-           @RequestParam Long resourceId,
+           @RequestParam Long id,
             @Valid @RequestBody ResourceDtos.UpdateRequest request) {
-        return resourceService.update(resourceId, request);
+        return resourceService.update(id, request);
     }
 
     @GetMapping("/get")
-    public ResourceDtos.Response getById(@RequestParam Long resourceId) {
-        return resourceService.getById(resourceId);
+    public ResourceDtos.Response getById(@RequestParam Long id) {
+        return resourceService.getById(id);
     }
 
     @GetMapping("/all")
@@ -43,7 +43,7 @@ public class ResourceController {
     }
 
     @DeleteMapping("/delete")
-    public void delete(@RequestParam Long resourceId) {
-        resourceService.delete(resourceId);
+    public void delete(@RequestParam Long id) {
+        resourceService.delete(id);
     }
 }

@@ -17,13 +17,13 @@ public class ProgramController {
 
     private final ProgramService programService;
 
-    @PreAuthorize("hasAnyAuthority('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/create")
     public ProgramDtos.Response create(@Valid @RequestBody ProgramDtos.Request request) {
         return programService.create(request);
     }
 
-    @PreAuthorize("hasAnyAuthority('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/update")
     public ProgramDtos.Response update(
             @RequestParam Long programId,
@@ -37,18 +37,13 @@ public class ProgramController {
         return programService.getById(programId);
     }
 
-    @GetMapping("/getByFaculty")
-    public List<ProgramDtos.Response> getByFaculty(@RequestParam Long facultyId) {
-        return programService.getByFacultyId(facultyId);
-    }
-
     @GetMapping("/all")
     public List<ProgramDtos.Response> getAll() {
         return programService.getAll();
     }
 
     // changed here
-    @PreAuthorize("hasAnyAuthority('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/delete")
     public void delete(@RequestParam Long programId) {
         programService.delete(programId);

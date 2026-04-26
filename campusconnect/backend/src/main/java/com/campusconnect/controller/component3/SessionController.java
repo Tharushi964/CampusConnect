@@ -2,6 +2,7 @@ package com.campusconnect.controller.component3;
 
 import com.campusconnect.dto.component3.SessionDtos;
 import com.campusconnect.service.component3.SessionService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -17,17 +18,17 @@ public class SessionController {
     private final SessionService sessionService;
 
     // ✅ Create session
-    @PreAuthorize("hasAnyAuthority('ADMIN','BATCHREP')")
+    @PreAuthorize("hasAnyRole('ADMIN','BATCHREP')")
     @PostMapping("/create")
-    public SessionDtos.Response create(@RequestBody SessionDtos.Request request) {
+    public SessionDtos.Response create(@Valid @RequestBody SessionDtos.Request request) {
         return sessionService.create(request);
     }
 
     // ✅ Update session
-    @PreAuthorize("hasAnyAuthority('ADMIN','BATCHREP')")
+    @PreAuthorize("hasAnyRole('ADMIN','BATCHREP')")
     @PutMapping("/update")
     public SessionDtos.Response update(@RequestParam Long id,
-                                       @RequestBody SessionDtos.Request request) {
+                                       @Valid @RequestBody SessionDtos.Request request) {
         return sessionService.update(id, request);
     }
 
@@ -49,8 +50,18 @@ public class SessionController {
         return sessionService.getByGroup(groupId);
     }
 
+    @GetMapping("/getByOrganizer")
+    public List<SessionDtos.Response> getByOrganizer(@RequestParam Long userId) {
+        return sessionService.getByOrganizer(userId);
+    }
+
+    @GetMapping("/pastByGroup")
+    public List<SessionDtos.Response> getPastByGroup(@RequestParam Long groupId) {
+        return sessionService.getPastByGroup(groupId);
+    }
+
     // ✅ Delete session
-    @PreAuthorize("hasAnyAuthority('ADMIN','BATCHREP')")
+    @PreAuthorize("hasAnyRole('ADMIN','BATCHREP')")
     @DeleteMapping("/delete")
     public void delete(@RequestParam Long id) {
         sessionService.delete(id);

@@ -16,13 +16,13 @@ import java.util.List;
 public class SemesterController {
     private final SemesterService semesterService;
 
-    @PreAuthorize("hasAnyAuthority('ADMIN','BATCHREP')")
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/create")
     public SemesterDtos.Response create(@Valid @RequestBody SemesterDtos.Request request) {
         return semesterService.create(request);
     }
 
-    @PreAuthorize("hasAnyAuthority('ADMIN','BATCHREP')")
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/update")
     public SemesterDtos.Response update(@RequestParam Long semesterId, @Valid @RequestBody SemesterDtos.Request request) {
         return semesterService.update(semesterId, request);
@@ -38,12 +38,7 @@ public class SemesterController {
         return semesterService.getAll();
     }
 
-    @GetMapping("/getByBatch")
-    public List<SemesterDtos.Response> getByBatch(@RequestParam Long batchId) {
-        return semesterService.getByBatch(batchId);
-    }
-
-    @PreAuthorize("hasAnyAuthority('ADMIN','BATCHREP')")
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/delete")
     public void delete(@RequestParam Long semesterId) {
         semesterService.delete(semesterId);
