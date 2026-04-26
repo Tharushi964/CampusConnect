@@ -1,18 +1,12 @@
 package com.campusconnect.controller.component4;
 
 import com.campusconnect.dto.component4.RatingDtos;
-import com.campusconnect.dto.component4.RecommendationDtos;
-import com.campusconnect.entity.component4.Rating;
 import com.campusconnect.service.component4.RatingService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/ratings")
@@ -33,12 +27,11 @@ public class RatingController {
         return ratingService.getById(id);
     }
 
-    // ✅ Get ratings for entity (ENUM version)
+    // ✅ Get ratings for entity
     @GetMapping("/entity")
     public List<RatingDtos.Response> getByEntity(
-            @RequestParam Rating.RatingType entityType,
-            @RequestParam Long entityId
-    ) {
+            @RequestParam String entityType,
+            @RequestParam Long entityId) {
         return ratingService.getByEntity(entityType, entityId);
     }
 
@@ -59,29 +52,4 @@ public class RatingController {
     public void delete(@PathVariable Long id) {
         ratingService.delete(id);
     }
-
-    @GetMapping("/summary")
-    public ResponseEntity<?> getSummary(
-            @RequestParam Rating.RatingType entityType,
-            @RequestParam Long entityId
-    ) {
-        return ResponseEntity.ok(
-            ratingService.getSummary(entityType, entityId)
-        );
-    }
-
-    @GetMapping("/top-resources-by-subject")
-    public List<RecommendationDtos> getTopResourcesBySubject(
-            @RequestParam Long subjectId
-    ) {
-        return ratingService.getTopResourcesBySubject(subjectId);
-    }
-
-    @GetMapping("/top-subjects")
-    public List<RecommendationDtos> getTopSubjectsBySemester(
-            @RequestParam Long semesterId
-    ) {
-        return ratingService.getTopSubjectsBySemester(semesterId);
-    }
-
 }

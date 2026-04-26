@@ -17,40 +17,45 @@ public class StudyGroupController {
 
     private final StudyGroupService studyGroupService;
 
-    // Create group
-    @PreAuthorize("hasAnyAuthority('ADMIN','BATCHREP')")
+    // ✅ Create group
+    @PreAuthorize("hasAnyRole('ADMIN','BATCHREP')")
     @PostMapping("/create")
     public StudyGroupDtos.Response create(@Valid @RequestBody StudyGroupDtos.Request request) {
         return studyGroupService.create(request);
     }
 
-    // Update group
-    @PreAuthorize("hasAnyAuthority('ADMIN','BATCHREP')")
+    // ✅ Update group
+    @PreAuthorize("hasAnyRole('ADMIN','BATCHREP')")
     @PutMapping("/update")
     public StudyGroupDtos.Response update(@RequestParam Long id,
                                           @Valid @RequestBody StudyGroupDtos.Request request) {
         return studyGroupService.update(id, request);
     }
 
-    // Get all groups
+    // ✅ Get all groups
     @GetMapping("/all")
     public List<StudyGroupDtos.Response> getAll() {
         return studyGroupService.getAll();
     }
 
-    // Get group by ID
+    // ✅ Get group by ID
     @GetMapping("/getById")
     public StudyGroupDtos.Response getById(@RequestParam Long id) {
         return studyGroupService.getById(id);
     }
 
-    @GetMapping("/getBysemester")
+    @GetMapping("/getBySemester")
     public List<StudyGroupDtos.Response> getBySemester(@RequestParam Long semesterId) {
-        return studyGroupService.getBySemesterId(semesterId);
+        return studyGroupService.getBySemester(semesterId);
     }
 
-    // Delete group
-    @PreAuthorize("hasAnyAuthority('ADMIN','BATCHREP')")
+    @GetMapping("/getByOrganizer")
+    public List<StudyGroupDtos.Response> getByOrganizer(@RequestParam Long userId) {
+        return studyGroupService.getByOrganizer(userId);
+    }
+
+    // ✅ Delete group
+    @PreAuthorize("hasAnyRole('ADMIN','BATCHREP')")
     @DeleteMapping("/delete")
     public void delete(@RequestParam Long id) {
         studyGroupService.delete(id);
