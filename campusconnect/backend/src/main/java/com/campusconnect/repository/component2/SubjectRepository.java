@@ -10,5 +10,13 @@ import org.springframework.stereotype.Repository;
 public interface SubjectRepository extends JpaRepository<Subject, Long> {
 
     List<Subject> findBySemester_SemesterId(Long semesterId);
+
+    boolean existsByCurriculum_CurriculumIdAndSubjectCodeIgnoreCase(Long curriculumId, String subjectCode);
+
+    boolean existsByCurriculum_CurriculumIdAndSubjectCodeIgnoreCaseAndSubjectIdNot(
+            Long curriculumId,
+            String subjectCode,
+            Long subjectId
+    );
 }
 

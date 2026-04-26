@@ -6,7 +6,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface EntityRatingSummaryRepository 
-        extends JpaRepository<EntityRatingSummary, EntityRatingSummaryId> {
+public interface EntityRatingSummaryRepository extends JpaRepository<EntityRatingSummary, EntityRatingSummaryId> {
 }
 
