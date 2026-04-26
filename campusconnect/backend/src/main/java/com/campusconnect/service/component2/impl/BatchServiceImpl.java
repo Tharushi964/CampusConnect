@@ -1,7 +1,6 @@
 package com.campusconnect.service.component2.impl;
 
 import com.campusconnect.dto.component2.BatchDtos;
-import com.campusconnect.dto.component2.CurriculumDtos;
 import com.campusconnect.entity.component2.Batch;
 import com.campusconnect.entity.component2.Campus;
 import com.campusconnect.entity.component2.Curriculum;
@@ -9,6 +8,7 @@ import com.campusconnect.repository.component2.BatchRepository;
 import com.campusconnect.repository.component2.CampusRepository;
 import com.campusconnect.repository.component2.CurriculumRepository;
 import com.campusconnect.service.component2.BatchService;
+import com.campusconnect.service.component2.SemesterService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -23,21 +23,35 @@ public class BatchServiceImpl implements BatchService {
     private final BatchRepository batchRepository;
     private final CampusRepository campusRepository;
     private final CurriculumRepository curriculumRepository;
+    private final SemesterService semesterService;
 
     @Override
     public BatchDtos.Response create(BatchDtos.Request request) {
+        if (request.curriculumId() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Curriculum is required to create batch");
+        }
+
         Campus campus = campusRepository.findById(request.campusId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Campus not found: " + request.campusId()));
 
-        Curriculum curriculum = null;
+        boolean duplicateExists = batchRepository.existsByCampus_CampusIdAndIntakeYearAndIntakeMonth(
+            request.campusId(),
+            request.intakeYear(),
+            request.intakeMonth()
+        );
 
-        if (request.curriculumId() != null) {
-            curriculum = curriculumRepository.findById(request.curriculumId())
-                    .orElseThrow(() -> new ResponseStatusException(
-                            HttpStatus.NOT_FOUND, 
-                            "Curriculum not found: " + request.curriculumId()
-                    ));
+        if (duplicateExists) {
+            throw new ResponseStatusException(
+                HttpStatus.CONFLICT,
+                "Batch already exists for the selected campus and intake period"
+            );
         }
+
+        Curriculum curriculum = curriculumRepository.findById(request.curriculumId())
+            .orElseThrow(() -> new ResponseStatusException(
+                HttpStatus.NOT_FOUND,
+                "Curriculum not found: " + request.curriculumId()
+            ));
 
         Batch batch = new Batch();
         batch.setIntakeYear(request.intakeYear());
@@ -47,27 +61,45 @@ public class BatchServiceImpl implements BatchService {
         batch.setCampus(campus);
         batch.setCurriculum(curriculum);
         batch.setCreatedAt(LocalDateTime.now());
-        return toResponse(batchRepository.save(batch));
+
+        Batch savedBatch = batchRepository.save(batch);
+        semesterService.generateSemestersForBatch(savedBatch);
+        return toResponse(savedBatch);
     }
 
     @Override
     public BatchDtos.Response update(Long batchId, BatchDtos.Request request) {
+        if (request.curriculumId() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Curriculum is required to update batch");
+        }
+
         Batch batch = batchRepository.findById(batchId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Batch not found: " + batchId));
 
         Campus campus = campusRepository.findById(request.campusId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Campus not found: " + request.campusId()));
 
-        Curriculum curriculum = null;
+        boolean duplicateExists = batchRepository.existsByCampus_CampusIdAndIntakeYearAndIntakeMonthAndBatchIdNot(
+            request.campusId(),
+            request.intakeYear(),
+            request.intakeMonth(),
+            batchId
+        );
 
-        if (request.curriculumId() != null) {
-            curriculum = curriculumRepository.findById(request.curriculumId())
-                    .orElseThrow(() -> new ResponseStatusException(
-                            HttpStatus.NOT_FOUND,
-                            "Curriculum not found: " + request.curriculumId()
-                    ));
+        if (duplicateExists) {
+            throw new ResponseStatusException(
+                HttpStatus.CONFLICT,
+                "Another batch already exists for the selected campus and intake period"
+            );
         }
 
+        Curriculum curriculum = curriculumRepository.findById(request.curriculumId())
+            .orElseThrow(() -> new ResponseStatusException(
+                HttpStatus.NOT_FOUND,
+                "Curriculum not found: " + request.curriculumId()
+            ));
+
+        batch.setBatchName(request.batchName());
         batch.setIntakeYear(request.intakeYear());
         batch.setIntakeMonth(request.intakeMonth());
         batch.setStatus(request.status());
@@ -81,23 +113,6 @@ public class BatchServiceImpl implements BatchService {
         return batchRepository.findById(batchId)
                 .map(this::toResponse)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Batch not found: " + batchId));
-    }
-
-    @Override
-    public List<BatchDtos.Response> getByCurriculum(Long curriculumId) {
-
-        List<Batch> batch = batchRepository.findByCurriculum_CurriculumId(curriculumId);
-
-        if (batch.isEmpty()) {
-            throw new ResponseStatusException(
-                    HttpStatus.NOT_FOUND,
-                    "No batchs found for curriculumId: " + curriculumId
-            );
-        }
-
-        return batch.stream()
-                .map(this::toResponse)
-                .toList();
     }
 
     @Override

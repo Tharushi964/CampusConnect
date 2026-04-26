@@ -13,8 +13,6 @@ public interface CurriculumService {
 
     List<CurriculumDtos.Response> getAll();
 
-    List<CurriculumDtos.Response> getByProgram(Long program);
-
     void delete(Long curriculumId);
 }
 

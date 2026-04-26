@@ -2,6 +2,7 @@ package com.campusconnect.service.component2.impl;
 
 import com.campusconnect.dto.component2.CampusDtos;
 import com.campusconnect.entity.component2.Campus;
+import com.campusconnect.repository.component2.BatchRepository;
 import com.campusconnect.repository.component2.CampusRepository;
 import com.campusconnect.service.component2.CampusService;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +16,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class CampusServiceImpl implements CampusService {
     private final CampusRepository campusRepository;
+    private final BatchRepository batchRepository;
 
     @Override
 public CampusDtos.Response create(CampusDtos.Request request) {
@@ -56,6 +58,40 @@ public CampusDtos.Response update(Long campusId, CampusDtos.Request request) {
 }
 
     @Override
+    public CampusDtos.Response activate(Long campusId) {
+        Campus campus = campusRepository.findById(campusId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Campus not found: " + campusId));
+
+        if ("ACTIVE".equalsIgnoreCase(campus.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Campus is already active");
+        }
+
+        campus.setStatus("ACTIVE");
+        return toResponse(campusRepository.save(campus));
+    }
+
+    @Override
+    public CampusDtos.Response deactivate(Long campusId) {
+        Campus campus = campusRepository.findById(campusId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Campus not found: " + campusId));
+
+        if (!"ACTIVE".equalsIgnoreCase(campus.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Only active campuses can be deactivated");
+        }
+
+        boolean hasActiveBatches = batchRepository.existsByCampus_CampusIdAndStatusIgnoreCase(campusId, "ACTIVE");
+        if (hasActiveBatches) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Cannot deactivate campus while it has active batches"
+            );
+        }
+
+        campus.setStatus("INACTIVE");
+        return toResponse(campusRepository.save(campus));
+    }
+
+    @Override
     public CampusDtos.Response getById(Long campusId) {
         return campusRepository.findById(campusId)
                 .map(this::toResponse)
@@ -80,8 +116,7 @@ public CampusDtos.Response update(Long campusId, CampusDtos.Request request) {
                 campus.getCampusId(),
                 campus.getCampusName(),
                 campus.getLocation(),
-                campus.getStatus(),
-                campus.getMailDomain()
+                campus.getStatus()
         );
     }
 }
