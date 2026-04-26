@@ -20,9 +20,107 @@ export const getAllRoles = () => {
     return api.get(`/api/roles/all`);
 }
 
-export const verifyEmailToken = (token) => {
-  return axios.get(`/auth/verify-email?token=${token}`);
-};
+export const getAllCampus = () => {
+    return api.get(`/api/campus/all`);
+}
+
+export const createCampus = (data) => {
+    return api.post("/api/campus", data);
+}
+
+export const updateCampus = (campusId, data) => {
+    return api.put(`/api/campus?campusId=${campusId}`, data);
+}
+
+export const activateCampus = (campusId) => {
+    return api.put(`/api/campus/activate?campusId=${campusId}`);
+}
+
+export const deactivateCampus = (campusId) => {
+    return api.put(`/api/campus/deactivate?campusId=${campusId}`);
+}
+
+export const createFaculty = (data) => {
+    return api.post("/api/faculties/create", data);
+}
+export const updateFaculty = (id, data) => {
+    return api.put(`/api/faculties/update?id=${id}`, data);
+}
+export const getFaculty = (id) =>{
+ return api.get(`/api/faculties/get?id=${id}`);
+}
+export const getAllFaculties = () => {
+    return api.get("/api/faculties/all");
+}
+export const deleteFaculty = (id) => {
+    return api.delete(`/api/faculties/delete?id=${id}`);
+}
+
+
+export const createProgram = (data) => {
+    return api.post("/api/programs/create", data);
+}
+export const updateProgram = (programId, data) => {
+    return api.put(`/api/programs/update?programId=${programId}`, data);
+}
+export const getProgram = (programId) => {
+    return api.get(`/api/programs/get?programId=${programId}`);
+}
+export const getAllPrograms = () => {
+    return api.get("/api/programs/all");
+}
+export const deleteProgram = (programId) => {
+    return api.delete(`/api/programs/delete?programId=${programId}`);
+}
+
+
+export const createBatch = (data) => {
+    return api.post("/api/batches/create", data);
+}
+export const updateBatch = (batchId, data) => {
+    return api.put(`/api/batches/update?batchId=${batchId}`, data);
+}
+export const getBatch = (batchId) => {
+    return api.get(`/api/batches/get?batchId=${batchId}`);
+}
+export const getAllBatches = () => {
+    return api.get("/api/batches/all");
+}
+export const deleteBatch = (batchId) => {
+    return api.delete(`/api/batches/delete?batchId=${batchId}`);
+}
+
+export const getAllSemesters = () => {
+    return api.get("/api/semesters/all");
+}
+
+export const createSemester = (data) => {
+    return api.post("/api/semesters/create", data);
+}
+
+export const getAllCurriculums = () => {
+    return api.get("/api/curriculums/all");
+}
+
+export const createCurriculum = (data) => {
+    return api.post("/api/curriculums/create", data);
+}
+
+export const updateCurriculum = (curriculumId, data) => {
+    return api.put(`/api/curriculums/update?curriculumId=${curriculumId}`, data);
+}
+
+export const createSubject = (data) => {
+    return api.post("/api/subjects/create", data);
+}
+
+export const getAllSubjects = () => {
+    return api.get("/api/subjects/all");
+}
+
+export const getSubjectsBySemester = (semesterId) => {
+    return api.get(`/api/subjects/getBySemester?semesterId=${semesterId}`);
+}
 
 
 export const getPendingBatchRepRequests = () => {
@@ -35,114 +133,71 @@ export const rejectBatchRepRequest = (requestId) =>{
     return api.put(`/api/admin/batchrep/reject?requestId=${requestId}`); 
 }
 
-
-export const createResource = (data) => {
-    return api.post("/api/resources/create", data);
-}
-export const updateResource = (id, data) => {
-    return api.put(`/api/resources/update?resourseId=${id}`, data);
-}
-export const getResourceById = (id) => {
-    return api.get(`/api/resources/get?resourseId=${id}`);
-}
-export const getAllResource = () => {
-    return api.get(`/api/resources/all`);
-}
-export const getResourceBySubject = (id) => {
-    return api.get(`/api/resources/getBySubject?subjectId=${id}`);
-}
-export const deleteResource = (id) => {
-    return api.delete(`/api/resources/delete?resourceId=${id}`);
+export const createStudyGroup = (data) => {
+    return api.post("/api/groups/create", data);
 }
 
-// Create or Update Rating
-export const createOrUpdateRating = (data) => {
-    return api.post("/api/ratings", data);
-};
+export const updateStudyGroup = (groupId, data) => {
+    return api.put(`/api/groups/update?id=${groupId}`, data);
+}
 
-// Get Rating by ID
-export const getRatingById = (id) => {
-    return api.get(`/api/ratings/${id}`);
-};
+export const deleteStudyGroup = (groupId) => {
+    return api.delete(`/api/groups/delete?id=${groupId}`);
+}
 
-// Get Ratings by Entity (SUBJECT, RESOURCE, SESSION, GROUP)
-export const getRatingsByEntity = (entityType, entityId) => {
-    return api.get("/api/ratings/entity", {
-        params: { entityType, entityId }
-    });
-};
+export const getAllStudyGroups = () => {
+    return api.get("/api/groups/all");
+}
 
-// Get Ratings by User
-export const getRatingsByUser = (userId) => {
-    return api.get(`/api/ratings/user/${userId}`);
-};
+export const getStudyGroupsBySemester = (semesterId) => {
+    return api.get(`/api/groups/getBySemester?semesterId=${semesterId}`);
+}
 
-// Get All Ratings
-export const getAllRatings = () => {
-    return api.get("/api/ratings");
-};
+export const getStudyGroupsByOrganizer = (userId) => {
+    return api.get(`/api/groups/getByOrganizer?userId=${userId}`);
+}
 
-// Delete Rating
-export const deleteRating = (id) => {
-    return api.delete(`/api/ratings/${id}`);
-};
+export const createSession = (data) => {
+    return api.post("/api/sessions/create", data);
+}
 
-// ─── FEEDBACK API — add this block to c1.api.js ────────────────────────────
-// Import this alongside userAPI, bookingAPI, ticketAPI
+export const updateSession = (sessionId, data) => {
+    return api.put(`/api/sessions/update?id=${sessionId}`, data);
+}
 
-// Create Feedback
+export const deleteSession = (sessionId) => {
+    return api.delete(`/api/sessions/delete?id=${sessionId}`);
+}
+
+export const getAllSessions = () => {
+    return api.get("/api/sessions/all");
+}
+
+export const getSessionsByGroup = (groupId) => {
+    return api.get(`/api/sessions/getByGroup?groupId=${groupId}`);
+}
+
+export const getSessionsByOrganizer = (userId) => {
+    return api.get(`/api/sessions/getByOrganizer?userId=${userId}`);
+}
+
+export const getPastSessionsByGroup = (groupId) => {
+    return api.get(`/api/sessions/pastByGroup?groupId=${groupId}`);
+}
+
 export const createFeedback = (data) => {
     return api.post("/api/feedbacks", data);
-};
+}
 
-// Update Feedback
-export const updateFeedback = (feedbackId, data) => {
-    return api.put(`/api/feedbacks/${feedbackId}`, data);
-};
-
-// Delete Feedback
-export const deleteFeedback = (feedbackId) => {
-    return api.delete(`/api/feedbacks/${feedbackId}`);
-};
-
-// Get Feedback by ID
-export const getFeedbackById = (feedbackId) => {
-    return api.get(`/api/feedbacks/${feedbackId}`);
-};
-
-// Get Feedback by User
-export const getFeedbackByUser = (userId) => {
+export const getFeedbacksByUser = (userId) => {
     return api.get(`/api/feedbacks/user/${userId}`);
-};
+}
 
-// Get Feedback by Session
-export const getFeedbackBySession = (sessionId) => {
+export const getFeedbacksBySession = (sessionId) => {
     return api.get(`/api/feedbacks/session/${sessionId}`);
-};
+}
 
-// Get All Feedbacks (ADMIN)
 export const getAllFeedbacks = () => {
     return api.get("/api/feedbacks");
-};
-
-// Filter by Faculty
-export const getFeedbackByFaculty = (faculty) => {
-    return api.get(`/api/feedbacks/faculty/${faculty}`);
-};
-
-// Filter by Program
-export const getFeedbackByProgram = (program) => {
-    return api.get(`/api/feedbacks/program/${program}`);
-};
-
-// Filter by Program + Year
-export const getFeedbackByProgramYear = (program, year) => {
-    return api.get(`/api/feedbacks/program/${program}/year/${year}`);
-};
-
-// Filter by Program + Year + Semester
-export const getFeedbackByProgramYearSemester = (program, year, semester) => {
-    return api.get(`/api/feedbacks/program/${program}/year/${year}/semester/${semester}`);
-};
-
-
+}
+  

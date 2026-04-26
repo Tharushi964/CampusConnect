@@ -1,9 +1,26 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "./contexts/AuthContext";
 
+const isTokenExpired = (token) => {
+  try {
+    const payloadPart = token.split(".")[1];
+    if (!payloadPart) return true;
+
+    const normalized = payloadPart.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
+    const payload = JSON.parse(atob(padded));
+
+    if (!payload?.exp) return false;
+    return Date.now() >= payload.exp * 1000;
+  } catch {
+    return true;
+  }
+};
+
 const ProtectedRoute = ({ children }) => {
-  const { user, loading } = useAuth();
+  const { loading } = useAuth();
   const token = localStorage.getItem("token");
+  const hasValidToken = !!token && !isTokenExpired(token);
 
   // 1. If AuthContext is still loading the user, show a spinner 
   // This prevents the "quick redirect" back to login
@@ -16,7 +33,9 @@ const ProtectedRoute = ({ children }) => {
   }
 
   // 2. Check if both token and user session are missing
-  if (!token) {
+  if (!hasValidToken) {
+    localStorage.removeItem("auth");
+    localStorage.removeItem("token");
     return <Navigate to="/campusconnect/login" replace />;
   }
 
