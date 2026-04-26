@@ -7,13 +7,11 @@ import jakarta.validation.constraints.NotNull;
 
 import java.time.LocalDateTime;
 
-import com.campusconnect.entity.component4.Rating;
-
 public final class RatingDtos {
     private RatingDtos() {}
 
     public record Request(
-            @NotNull Rating.RatingType entityType,   // SUBJECT / SESSION / GROUP / RESOURCE
+            @NotBlank String entityType,   // SUBJECT / SESSION / GROUP / RESOURCE
             @NotNull Long entityId,
             @NotNull @Min(1) @Max(5) Integer ratingValue,
             String comment,
@@ -22,7 +20,7 @@ public final class RatingDtos {
 
     public record Response(
             Long ratingId,
-            Rating.RatingType entityType,
+            String entityType,
             Long entityId,
             Integer ratingValue,
             String comment,

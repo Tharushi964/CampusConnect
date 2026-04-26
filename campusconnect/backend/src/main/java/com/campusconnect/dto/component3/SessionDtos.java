@@ -18,6 +18,7 @@ public final class SessionDtos {
             @NotBlank String mode,
              String location,
              String link,
+             String driveLink,
             @NotBlank String status,
             @NotNull Long groupId,
             @NotNull Long createdByUserId
@@ -33,6 +34,7 @@ public final class SessionDtos {
             String mode,
             String location,
             String link,
+            String driveLink,
             String status,
             Long groupId,
             Long createdByUserId
