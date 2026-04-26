@@ -11,7 +11,9 @@ public interface StudyGroupService {
 
     StudyGroupDtos.Response getById(Long groupId);
 
-    List<StudyGroupDtos.Response> getBySemesterId(Long semesterId);
+    List<StudyGroupDtos.Response> getBySemester(Long semesterId);
+
+    List<StudyGroupDtos.Response> getByOrganizer(Long userId);
 
     List<StudyGroupDtos.Response> getAll();
 

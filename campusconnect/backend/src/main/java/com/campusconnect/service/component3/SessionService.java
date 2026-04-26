@@ -13,6 +13,10 @@ public interface SessionService {
 
     List<SessionDtos.Response> getByGroup(Long groupId);
 
+    List<SessionDtos.Response> getByOrganizer(Long userId);
+
+    List<SessionDtos.Response> getPastByGroup(Long groupId);
+
     List<SessionDtos.Response> getAll();
 
     void delete(Long sessionId);
