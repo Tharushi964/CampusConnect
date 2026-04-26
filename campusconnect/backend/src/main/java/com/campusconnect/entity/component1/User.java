@@ -61,7 +61,6 @@ public class User {
     @ManyToOne
     @JoinColumn(name = "campus_id")
     private Campus campus;
-
-
+    
 
 }

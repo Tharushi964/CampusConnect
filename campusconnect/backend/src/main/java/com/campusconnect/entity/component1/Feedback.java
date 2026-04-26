@@ -22,6 +22,8 @@ public class Feedback {
 
     private String status;
 
+    private Integer rating;
+
     private LocalDateTime createdAt;
 
     @ManyToOne
