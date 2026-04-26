@@ -18,8 +18,6 @@ public class Program {
 
     private String status;
 
-    private String name;
-
     @ManyToOne
     @JoinColumn(name = "faculty_id")
     private Faculty faculty;
