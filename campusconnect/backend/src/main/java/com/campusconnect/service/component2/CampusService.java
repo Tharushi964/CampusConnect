@@ -9,6 +9,10 @@ public interface CampusService {
 
     CampusDtos.Response update(Long campusId, CampusDtos.Request request);
 
+    CampusDtos.Response activate(Long campusId);
+
+    CampusDtos.Response deactivate(Long campusId);
+
     CampusDtos.Response getById(Long campusId);
 
     List<CampusDtos.Response> getAll();

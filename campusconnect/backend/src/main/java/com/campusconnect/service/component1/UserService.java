@@ -14,10 +14,5 @@ public interface UserService {
     List<UserDtos.Response> getAll();
 
     void delete(Long userId);
-
-    String verifyUser(String token);
-
-
-    
 }
 
