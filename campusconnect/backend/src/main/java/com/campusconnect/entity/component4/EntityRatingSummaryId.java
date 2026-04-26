@@ -1,8 +1,6 @@
 package com.campusconnect.entity.component4;
 
 import jakarta.persistence.Embeddable;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import lombok.*;
 
 import java.io.Serializable;
@@ -13,8 +11,6 @@ import java.io.Serializable;
 @Embeddable
 public class EntityRatingSummaryId implements Serializable {
 
-    @Enumerated(EnumType.STRING)
-    private Rating.RatingType entityType;
-    
+    private String entityType;
     private Long entityId;
 }
