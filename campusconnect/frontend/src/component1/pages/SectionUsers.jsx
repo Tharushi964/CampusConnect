@@ -8,13 +8,15 @@ import {
 import {
   getAllUsers,
   getAllRoles,
+  getAllCampus,
+  getAllBatches,
+  getAllSemesters,
+  getAllFaculties,
+  getAllPrograms,
   createUser,
   deleteUser,
   updateUser
 } from "../utils/C1api";
-
-import {getAllFaculties,
-  getAllPrograms} from "../../component2/utils/C2api"
 
 import {
   StatCard,
@@ -88,6 +90,9 @@ export default function SectionUsers({ notify, isDark }) {
 
   const [users,     setUsers]     = useState([]);
   const [roles,     setRoles]     = useState([]);
+  const [campuses,  setCampuses]  = useState([]);
+  const [batches,   setBatches]   = useState([]);
+  const [semesters, setSemesters] = useState([]);
   const [faculties, setFaculties] = useState([]);
   const [programs,  setPrograms]  = useState([]);
   const [search,    setSearch]    = useState("");
@@ -102,11 +107,20 @@ export default function SectionUsers({ notify, isDark }) {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [userRes, roleRes, facRes, progRes] = await Promise.all([
-        getAllUsers(), getAllRoles(), getAllFaculties(), getAllPrograms()
+      const [userRes, roleRes, campusRes, batchRes, semRes, facRes, progRes] = await Promise.all([
+        getAllUsers(),
+        getAllRoles(),
+        getAllCampus(),
+        getAllBatches(),
+        getAllSemesters(),
+        getAllFaculties(),
+        getAllPrograms(),
       ]);
       setUsers(userRes.data);
       setRoles(roleRes.data);
+      setCampuses(campusRes?.data || []);
+      setBatches(batchRes?.data || []);
+      setSemesters(semRes?.data || []);
       setFaculties(facRes?.data || []);
       setPrograms(progRes?.data || []);
     } catch (err) {
@@ -135,6 +149,7 @@ export default function SectionUsers({ notify, isDark }) {
       batchId:   u.batchId,
       campusId:  u.campusId,
       facultyId: u.facultyId,
+      programId: u.programId,
       semesterId:u.semesterId,
     };
   });
@@ -153,10 +168,18 @@ export default function SectionUsers({ notify, isDark }) {
 
   // Derived option lists from fetched data
   const roleOptions    = roles.map(r => ({ label: formatRole(r.roleName), value: r.roleId }));
+  const campusOptions  = campuses.map(c => ({ label: c.campusName ?? c.name, value: c.campusId ?? c.id }));
+  const batchOptions   = batches.map(b => ({ label: b.batchName ?? b.name, value: b.batchId ?? b.id }));
   const facultyOptions = faculties.map(f => ({ label: f.facultyName ?? f.name, value: f.facultyId ?? f.id }));
   const programOptions = programs
     .filter(p => !form.facultyId || String(p.facultyId) === String(form.facultyId))
-    .map(p => ({ label: p.programName ?? p.name, value: p.batchId ?? p.id }));
+    .map(p => ({ label: p.programName ?? p.name, value: p.programId ?? p.id }));
+  const semesterOptions = semesters
+    .filter(s => !form.batchId || String(s.batchId) === String(form.batchId))
+    .map(s => ({ label: `Year ${s.yearNumber} - Semester ${s.semesterNumber}`, value: s.semesterId }));
+
+  const selectedRole = roles.find(r => String(r.roleId) === String(form.roleId));
+  const isAdmin = selectedRole?.roleName?.toUpperCase() === "ADMIN";
 
   // ─── Open modals ───────────────────────────────────────────────
   const openAdd = () => {
@@ -164,7 +187,7 @@ export default function SectionUsers({ notify, isDark }) {
       firstName: "", lastName: "", studentId: "",
       email: "", username: "", password: "",
       roleId: "", campusId: "", facultyId: "",
-      batchId: "", semesterId: "",
+      batchId: "", programId: "", semesterId: "",
     });
     setModal({ mode: "add" });
   };
@@ -181,6 +204,7 @@ export default function SectionUsers({ notify, isDark }) {
       campusId:   u.campusId ?? "",
       facultyId:  u.facultyId ?? "",
       batchId:    u.batchId ?? "",
+      programId:  u.programId ?? "",
       semesterId: u.semesterId ?? "",
     });
     setModal({ mode: "edit", id: u.id });
@@ -188,20 +212,57 @@ export default function SectionUsers({ notify, isDark }) {
 
   // ─── Save (create / update) ────────────────────────────────────
   const save = async () => {
-    setSaving(true);
     try {
+      const toOptionalNumber = (value) => {
+        if (value === "" || value === null || value === undefined) return null;
+        const num = Number(value);
+        return Number.isNaN(num) ? null : num;
+      };
+
+      const firstName = (form.firstName ?? "").trim();
+      const lastName = (form.lastName ?? "").trim();
+      const email = (form.email ?? "").trim();
+      const username = (form.username ?? "").trim();
+      const password = (form.password ?? "").trim();
+      const studentId = (form.studentId ?? "").trim();
+
+      const roleId = toOptionalNumber(form.roleId);
+      const campusId = toOptionalNumber(form.campusId);
+      const facultyId = isAdmin ? null : toOptionalNumber(form.facultyId);
+      const batchId = isAdmin ? null : toOptionalNumber(form.batchId);
+      const programId = isAdmin ? null : toOptionalNumber(form.programId);
+      const semesterId = isAdmin ? null : toOptionalNumber(form.semesterId);
+
+      if (!firstName || !lastName || !email || !username || !roleId || !campusId) {
+        notify("error", "First name, last name, email, username, role, and campus are required.");
+        return;
+      }
+
+      if (modal?.mode === "add" && !password) {
+        notify("error", "Password is required when creating a user.");
+        return;
+      }
+
+      if (!isAdmin && (!facultyId || !batchId || !programId || !semesterId)) {
+        notify("error", "Faculty, program, batch, and semester are required for non-admin users.");
+        return;
+      }
+
+      setSaving(true);
+
       const payload = {
-        firstName:  form.firstName,
-        lastName:   form.lastName,
-        studentId:  form.studentId,
-        email:      form.email,
-        username:   form.username,
-        roleId:     Number(form.roleId),
-        campusId:   Number(form.campusId),
-        facultyId:  Number(form.facultyId),
-        batchId:    Number(form.batchId),
-        semesterId: Number(form.semesterId),
-        ...(form.password && { password: form.password }),
+        firstName,
+        lastName,
+        studentId,
+        email,
+        username,
+        roleId,
+        campusId,
+        facultyId,
+        batchId,
+        programId,
+        semesterId,
+        ...(password && { password }),
       };
 
       if (modal.mode === "add") {
@@ -216,7 +277,12 @@ export default function SectionUsers({ notify, isDark }) {
       fetchData();
     } catch (err) {
       console.error(err);
-      notify("error", err?.response?.data?.message ?? "Failed to save user.");
+      const apiMessage =
+        err?.response?.data?.message ||
+        err?.response?.data?.detail ||
+        err?.response?.data?.error ||
+        err?.response?.data?.title;
+      notify("error", apiMessage || "Failed to save user.");
     } finally {
       setSaving(false);
     }
@@ -234,7 +300,12 @@ export default function SectionUsers({ notify, isDark }) {
       notify("success", "User deleted.");
       fetchData();
     } catch (err) {
-      notify("error", err?.response?.data?.message ?? "Failed to delete user.");
+      const apiMessage =
+        err?.response?.data?.message ||
+        err?.response?.data?.detail ||
+        err?.response?.data?.error ||
+        err?.response?.data?.title;
+      notify("error", apiMessage ?? "Failed to delete user.");
     } finally {
       setConfirm(null);
     }
@@ -439,16 +510,23 @@ export default function SectionUsers({ notify, isDark }) {
         <FormSection label="Role & Campus" isDark={isDark}/>
         <div className="grid grid-cols-2 gap-x-4">
           <TSelect label="Role"   name="roleId"   value={form.roleId   ?? ""} options={roleOptions}   required/>
-          <ThemedField label="Campus ID" name="campusId" value={form.campusId ?? ""} onChange={hc} isDark={isDark} required placeholder="1"/>
+          <TSelect label="Campus" name="campusId" value={form.campusId ?? ""} options={campusOptions} required/>
         </div>
 
         {/* Academic */}
-        <FormSection label="Academic" isDark={isDark}/>
-        <div className="grid grid-cols-2 gap-x-4">
-          <TSelect label="Faculty"  name="facultyId"  value={form.facultyId  ?? ""} options={facultyOptions} required/>
-          <TSelect label="Batch"    name="batchId"    value={form.batchId    ?? ""} options={programOptions} required/>
-        </div>
-        <ThemedField label="Semester ID" name="semesterId" value={form.semesterId ?? ""} onChange={hc} isDark={isDark} required placeholder="1"/>
+        {!isAdmin && (
+          <>
+            <FormSection label="Academic" isDark={isDark}/>
+            <div className="grid grid-cols-2 gap-x-4">
+              <TSelect label="Faculty" name="facultyId" value={form.facultyId ?? ""} options={facultyOptions} required/>
+              <TSelect label="Program" name="programId" value={form.programId ?? ""} options={programOptions} required/>
+            </div>
+            <div className="grid grid-cols-2 gap-x-4">
+              <TSelect label="Batch" name="batchId" value={form.batchId ?? ""} options={batchOptions} required/>
+              <TSelect label="Semester" name="semesterId" value={form.semesterId ?? ""} options={semesterOptions} required/>
+            </div>
+          </>
+        )}
 
         {/* Footer */}
         <div className={`flex justify-end gap-2 mt-5 pt-4 border-t ${t.divider}`}>

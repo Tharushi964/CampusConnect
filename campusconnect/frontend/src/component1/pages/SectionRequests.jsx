@@ -125,8 +125,12 @@ export default function SectionRequests({ notify, isDark }) {
         type:   "Batch Rep Registration",
         raw:    r,
       })));
-    } catch {
-      notify?.("error", "Failed to load requests");
+    } catch (error) {
+      if (error?.response?.status === 403) {
+        notify?.("error", "Access denied. Please log in as an admin account.");
+      } else {
+        notify?.("error", "Failed to load requests");
+      }
     } finally {
       setLoading(false);
     }
@@ -150,8 +154,12 @@ export default function SectionRequests({ notify, isDark }) {
       else if (action === "REJECTED") await rejectBatchRepRequest(id);
       notify?.(action === "APPROVED" ? "success" : "info", `Request ${action.toLowerCase()}.`);
       loadRequests();
-    } catch {
-      notify?.("error", "Action failed. Please try again.");
+    } catch (error) {
+      if (error?.response?.status === 403) {
+        notify?.("error", "Access denied. Please log in as an admin account.");
+      } else {
+        notify?.("error", "Action failed. Please try again.");
+      }
     } finally {
       setActioning(false);
       setCommentModal(null);
