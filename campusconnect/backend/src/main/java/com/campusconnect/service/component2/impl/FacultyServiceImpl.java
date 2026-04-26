@@ -1,9 +1,7 @@
 package com.campusconnect.service.component2.impl;
 
 import com.campusconnect.dto.component2.FacultyDtos;
-import com.campusconnect.entity.component2.Campus;
 import com.campusconnect.entity.component2.Faculty;
-import com.campusconnect.repository.component2.CampusRepository;
 import com.campusconnect.repository.component2.FacultyRepository;
 import com.campusconnect.service.component2.FacultyService;
 
@@ -19,17 +17,12 @@ import java.util.List;
 public class FacultyServiceImpl implements FacultyService {
 
     private final FacultyRepository facultyRepository;
-    private final CampusRepository campusRepository;
 
     @Override
     public FacultyDtos.Response create(FacultyDtos.Request request) {
-        Campus campus = campusRepository.findById(request.campusId())
-        .orElseThrow(() -> new ResponseStatusException(
-                HttpStatus.NOT_FOUND, "Campus not found"));
         Faculty faculty = new Faculty();
         faculty.setFacultyName(request.facultyName());
         faculty.setStatus(request.status());
-        faculty.setCampus(campus);
 
         return toResponse(facultyRepository.save(faculty));
     }
@@ -39,13 +32,9 @@ public class FacultyServiceImpl implements FacultyService {
         Faculty faculty = facultyRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Faculty not found: " + id));
-        Campus campus = campusRepository.findById(request.campusId())
-        .orElseThrow(() -> new ResponseStatusException(
-                HttpStatus.NOT_FOUND, "Campus not found"));
 
         faculty.setFacultyName(request.facultyName());
         faculty.setStatus(request.status());
-        faculty.setCampus(campus); 
 
         return toResponse(facultyRepository.save(faculty));
     }
@@ -56,23 +45,6 @@ public class FacultyServiceImpl implements FacultyService {
                 .map(this::toResponse)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Faculty not found: " + id));
-    }
-
-    @Override
-    public List<FacultyDtos.Response> getByCampusId(Long campusId) {
-
-        List<Faculty> faculties = facultyRepository.findByCampus_CampusId(campusId);
-
-        if (faculties.isEmpty()) {
-            throw new ResponseStatusException(
-                    HttpStatus.NOT_FOUND,
-                    "No faculties found for campusId: " + campusId
-            );
-        }
-
-        return faculties.stream()
-                .map(this::toResponse)
-                .toList();
     }
 
     @Override
@@ -96,8 +68,7 @@ public class FacultyServiceImpl implements FacultyService {
         return new FacultyDtos.Response(
                 faculty.getFacultyId(),
                 faculty.getFacultyName(),
-                faculty.getStatus(),
-                faculty.getCampus() == null ? null : faculty.getCampus().getCampusId()
+                faculty.getStatus()
         );
     }
 }

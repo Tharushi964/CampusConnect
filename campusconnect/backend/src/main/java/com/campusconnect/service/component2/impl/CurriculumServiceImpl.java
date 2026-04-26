@@ -1,7 +1,6 @@
 package com.campusconnect.service.component2.impl;
 
 import com.campusconnect.dto.component2.CurriculumDtos;
-import com.campusconnect.dto.component2.ProgramDtos;
 import com.campusconnect.entity.component2.Curriculum;
 import com.campusconnect.entity.component2.Program;
 import com.campusconnect.repository.component2.CurriculumRepository;
@@ -22,6 +21,21 @@ public class CurriculumServiceImpl implements CurriculumService {
 
     @Override
     public CurriculumDtos.Response create(CurriculumDtos.Request request) {
+        if (request.programId() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Program is required");
+        }
+
+        boolean duplicateExists = curriculumRepository.existsByProgram_ProgramIdAndCurriculumNameIgnoreCase(
+                request.programId(),
+                request.curriculumName()
+        );
+        if (duplicateExists) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Curriculum already exists for this program"
+            );
+        }
+
         Program program = programRepository.findById(request.programId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Program not found: " + request.programId()));
 
@@ -36,6 +50,22 @@ public class CurriculumServiceImpl implements CurriculumService {
 
     @Override
     public CurriculumDtos.Response update(Long curriculumId, CurriculumDtos.Request request) {
+        if (request.programId() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Program is required");
+        }
+
+        boolean duplicateExists = curriculumRepository.existsByProgram_ProgramIdAndCurriculumNameIgnoreCaseAndCurriculumIdNot(
+                request.programId(),
+                request.curriculumName(),
+                curriculumId
+        );
+        if (duplicateExists) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Another curriculum with this name already exists for the selected program"
+            );
+        }
+
         Curriculum curriculum = curriculumRepository.findById(curriculumId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Curriculum not found: " + curriculumId));
 
@@ -55,23 +85,6 @@ public class CurriculumServiceImpl implements CurriculumService {
         return curriculumRepository.findById(curriculumId)
                 .map(this::toResponse)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Curriculum not found: " + curriculumId));
-    }
-
-    @Override
-    public List<CurriculumDtos.Response> getByProgram(Long programId) {
-
-        List<Curriculum> curriculum = curriculumRepository.findByProgram_ProgramId(programId);
-
-        if (curriculum.isEmpty()) {
-            throw new ResponseStatusException(
-                    HttpStatus.NOT_FOUND,
-                    "No curriculum found for programId: " + programId
-            );
-        }
-
-        return curriculum.stream()
-                .map(this::toResponse)
-                .toList();
     }
 
     @Override

@@ -61,23 +61,6 @@ public class ProgramServiceImpl implements ProgramService {
     }
 
     @Override
-    public List<ProgramDtos.Response> getByFacultyId(Long facultyId) {
-
-        List<Program> programs = programRepository.findByFaculty_FacultyId(facultyId);
-
-        if (programs.isEmpty()) {
-            throw new ResponseStatusException(
-                    HttpStatus.NOT_FOUND,
-                    "No programs found for facultyId: " + facultyId
-            );
-        }
-
-        return programs.stream()
-                .map(this::toResponse)
-                .toList();
-    }
-
-    @Override
     public List<ProgramDtos.Response> getAll() {
         return programRepository.findAll().stream().map(this::toResponse).toList();
     }
