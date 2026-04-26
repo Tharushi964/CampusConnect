@@ -15,8 +15,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
     boolean existsByStudentId(String studentId);
 
     long countByBatch_BatchIdAndRole_RoleName(Long batchId, String roleName);
-    void deleteByUserId(Long userId);
-    
 
 }
 

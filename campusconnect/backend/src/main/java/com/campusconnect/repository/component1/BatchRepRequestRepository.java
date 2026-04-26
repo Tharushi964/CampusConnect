@@ -8,6 +8,7 @@ import java.util.List;
 public interface BatchRepRequestRepository extends JpaRepository<BatchRepRequest, Long> {
 
     List<BatchRepRequest> findByStatus(String status);
-    void deleteByUser_UserId(Long userId);
+
+    long deleteByUser_UserId(Long userId);
 
 }
